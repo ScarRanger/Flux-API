@@ -23,10 +23,11 @@ export function LoginForm() {
   const handleGoogleSignIn = async () => {
     try {
       setIsSigningIn(true);
-      await signInWithGoogle();
       
-      // Store the selected role in localStorage for now (you can enhance this later)
-      localStorage.setItem('userRole', selectedRole);
+      // Store the selected role in localStorage before sign in
+      localStorage.setItem('selectedUserRole', selectedRole);
+      
+      await signInWithGoogle();
       
       // Redirect based on role
       if (selectedRole === 'seller') {

@@ -143,7 +143,7 @@ export class WalletDB {
   // Update user profile
   static async updateUserProfile(
     firebaseUID: string, 
-    updates: Partial<Pick<User, 'display_name' | 'photo_url' | 'email'>>
+    updates: Partial<Pick<User, 'display_name' | 'photo_url' | 'email' | 'role'>>
   ): Promise<User | null> {
     const setClause = Object.keys(updates)
       .map((key, index) => `${key} = $${index + 2}`)

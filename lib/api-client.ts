@@ -55,6 +55,31 @@ export class ApiClient {
     }
   }
 
+  static async updateUserRole(firebaseUID: string, role: 'buyer' | 'seller'): Promise<{ success: boolean; user?: User }> {
+    try {
+      const response = await fetch('/api/auth/update-role', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          firebaseUID,
+          role,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to update user role');
+      }
+
+      const data = await response.json();
+      return { success: data.success, user: data.user };
+    } catch (error) {
+      console.error('Error updating user role:', error);
+      return { success: false };
+    }
+  }
+
   static async getWalletInfo(firebaseUID: string): Promise<{ address: string } | null> {
     try {
       const response = await fetch('/api/wallet/instance', {

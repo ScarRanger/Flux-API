@@ -43,12 +43,21 @@ export function AuthProvider({ children }: AuthProviderProps) {
   // Fetch user data from database
   const fetchDbUser = async (firebaseUser: FirebaseUser): Promise<User | null> => {
     try {
-      return await ApiClient.createOrGetUser({
+      // Get the selected role from localStorage (set during sign in)
+      const selectedRole = localStorage.getItem('selectedUserRole') as 'buyer' | 'seller' | null;
+      
+      const userData = await ApiClient.createOrGetUser({
         uid: firebaseUser.uid,
         email: firebaseUser.email || '',
         displayName: firebaseUser.displayName || undefined,
         photoURL: firebaseUser.photoURL || undefined,
+        role: selectedRole || undefined,
       });
+      
+      // Clear the selected role after use
+      localStorage.removeItem('selectedUserRole');
+      
+      return userData;
     } catch (error) {
       console.error('Error fetching user data:', error);
       return null;
