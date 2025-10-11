@@ -9,7 +9,8 @@ import {
   GoogleAuthProvider 
 } from 'firebase/auth';
 import { auth, googleProvider } from '@/lib/firebase';
-import { User } from '@/lib/database';
+import { User } from '@/lib/types';
+import { ApiClient } from '@/lib/api-client';
 
 interface AuthContextType {
   user: FirebaseUser | null;
@@ -42,25 +43,12 @@ export function AuthProvider({ children }: AuthProviderProps) {
   // Fetch user data from database
   const fetchDbUser = async (firebaseUser: FirebaseUser): Promise<User | null> => {
     try {
-      const response = await fetch('/api/auth/user', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          firebaseUID: firebaseUser.uid,
-          email: firebaseUser.email,
-          displayName: firebaseUser.displayName,
-          photoURL: firebaseUser.photoURL,
-        }),
+      return await ApiClient.createOrGetUser({
+        uid: firebaseUser.uid,
+        email: firebaseUser.email || '',
+        displayName: firebaseUser.displayName || undefined,
+        photoURL: firebaseUser.photoURL || undefined,
       });
-
-      if (!response.ok) {
-        throw new Error('Failed to fetch user data');
-      }
-
-      const userData = await response.json();
-      return userData.user;
     } catch (error) {
       console.error('Error fetching user data:', error);
       return null;
@@ -82,15 +70,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
       const result = await signInWithPopup(auth, googleProvider);
       
       // Update last login in database
-      await fetch('/api/auth/login', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          firebaseUID: result.user.uid,
-        }),
-      });
+      await ApiClient.updateLastLogin(result.user.uid);
       
     } catch (error) {
       console.error('Error signing in with Google:', error);
@@ -159,22 +139,7 @@ export function useWallet() {
     if (!dbUser) return null;
 
     try {
-      const response = await fetch('/api/wallet/instance', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          firebaseUID: dbUser.firebase_uid,
-        }),
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to create wallet instance');
-      }
-
-      const data = await response.json();
-      return data.wallet;
+      return await ApiClient.getWalletInfo(dbUser.firebase_uid);
     } catch (error) {
       console.error('Error creating wallet instance:', error);
       return null;

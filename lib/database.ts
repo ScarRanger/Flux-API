@@ -1,8 +1,7 @@
-'use client';
-
 import { Pool } from 'pg';
 import { ethers } from 'ethers';
 import crypto from 'crypto';
+import { User } from '@/lib/types';
 
 // Database connection
 const pool = new Pool({
@@ -35,22 +34,6 @@ export function decryptPrivateKey(encryptedKey: string, salt: string): string {
   let decrypted = decipher.update(encrypted, 'hex', 'utf8');
   decrypted += decipher.final('utf8');
   return decrypted;
-}
-
-// User interface
-export interface User {
-  id: string;
-  firebase_uid: string;
-  email: string;
-  display_name?: string;
-  photo_url?: string;
-  wallet_address: string;
-  encrypted_private_key: string;
-  encryption_salt: string;
-  is_active: boolean;
-  created_at: Date;
-  updated_at: Date;
-  last_login?: Date;
 }
 
 // Database functions

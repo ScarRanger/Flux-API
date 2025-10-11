@@ -8,12 +8,15 @@ import { WalletWidget } from "@/components/shared/wallet-widget"
 import { NotificationsCenter } from "@/components/shared/notifications-center"
 import { cn } from "@/lib/utils"
 import { ThemeToggle } from "@/components/theme-toggle"
-import { useSession } from "@/components/auth/session-context"
+import { useAuth } from "@/lib/auth-context"
 
 export function Header() {
   const [q, setQ] = useState("")
-  const { session, logout } = useSession()
-  const role = session?.role
+  const { user, dbUser, logout } = useAuth()
+  // For now, we'll treat all authenticated users as buyers
+  // You can extend this logic based on your user roles in the database
+  const isAuthenticated = !!user && !!dbUser
+  const role: "buyer" | "seller" | null = isAuthenticated ? "buyer" : null // Can be "buyer", "seller", or null
 
   return (
     <header className="sticky top-0 z-50 border-b bg-background/80 backdrop-blur supports-[backdrop-filter]:bg-background/60">
@@ -36,11 +39,11 @@ export function Header() {
               My Buyer Dashboard
             </Link>
           )}
-          {role === "seller" && (
+          {/* {role === "seller" && (
             <Link className="rounded-md px-3 py-2 text-sm hover:bg-secondary" href="/seller">
               My Seller Dashboard
             </Link>
-          )}
+          )} */}
         </nav>
 
         <form

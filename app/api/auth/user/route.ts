@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { WalletDB } from '@/lib/database';
-import { adminAuth } from '@/lib/firebase-admin';
+import WalletDB from '@/lib/database';
+import { User } from '@/lib/types';
 
 export async function POST(request: NextRequest) {
   try {
@@ -14,7 +14,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Check if user already exists
-    let user = await WalletDB.getUserByFirebaseUID(firebaseUID);
+    let user: User | null = await WalletDB.getUserByFirebaseUID(firebaseUID);
 
     if (!user) {
       // Create new user with wallet
@@ -43,10 +43,13 @@ export async function POST(request: NextRequest) {
       console.log(`New user created: ${email} with wallet: ${user.wallet_address}`);
     } else {
       // Update existing user profile if needed
-      const updates: any = {};
+      const updates: Partial<Pick<User, 'email' | 'display_name' | 'photo_url'>> = {};
+
       if (user.email !== email) updates.email = email;
-      if (user.display_name !== displayName) updates.display_name = displayName;
-      if (user.photo_url !== photoURL) updates.photo_url = photoURL;
+      if (displayName !== undefined && user.display_name !== displayName)
+        updates.display_name = displayName;
+      if (photoURL !== undefined && user.photo_url !== photoURL)
+        updates.photo_url = photoURL;
 
       if (Object.keys(updates).length > 0) {
         const oldValues = {

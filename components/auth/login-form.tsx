@@ -1,6 +1,8 @@
 'use client';
 
 import { useState } from 'react';
+import { useRouter, usePathname } from 'next/navigation';
+import Link from 'next/link';
 import { useAuth } from '@/lib/auth-context';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -11,11 +13,18 @@ import { Wallet, LogIn, Shield, Zap } from 'lucide-react';
 export function LoginForm() {
   const { signInWithGoogle, loading } = useAuth();
   const [isSigningIn, setIsSigningIn] = useState(false);
+  const router = useRouter();
+  const pathname = usePathname();
+  
+  // Check if we're on signup page to customize messaging
+  const isSignupPage = pathname === '/signup';
 
   const handleGoogleSignIn = async () => {
     try {
       setIsSigningIn(true);
       await signInWithGoogle();
+      // After successful authentication, redirect to dashboard or home
+      router.push('/');
     } catch (error) {
       console.error('Sign in failed:', error);
       // You could show a toast notification here
@@ -39,9 +48,14 @@ export function LoginForm() {
           <div className="flex justify-center mb-4">
             <Wallet className="w-12 h-12 text-primary" />
           </div>
-          <CardTitle className="text-2xl">Welcome to API Marketplace</CardTitle>
+          <CardTitle className="text-2xl">
+            {isSignupPage ? 'Join API Marketplace' : 'Welcome Back'}
+          </CardTitle>
           <CardDescription>
-            Sign in to access decentralized API quotas and manage your wallet
+            {isSignupPage 
+              ? 'Create your account to access decentralized API quotas and get your wallet'
+              : 'Sign in to access decentralized API quotas and manage your wallet'
+            }
           </CardDescription>
         </CardHeader>
         
@@ -72,12 +86,12 @@ export function LoginForm() {
             {isSigningIn ? (
               <>
                 <Spinner className="w-4 h-4 mr-2" />
-                Creating your wallet...
+                {isSignupPage ? 'Creating your account...' : 'Signing you in...'}
               </>
             ) : (
               <>
                 <LogIn className="w-4 h-4 mr-2" />
-                Continue with Google
+                {isSignupPage ? 'Sign Up with Google' : 'Continue with Google'}
               </>
             )}
           </Button>
@@ -85,14 +99,17 @@ export function LoginForm() {
           {/* Benefits */}
           <div className="pt-4 border-t">
             <p className="text-xs text-muted-foreground text-center mb-3">
-              What happens when you sign in:
+              {isSignupPage 
+                ? 'What happens when you sign up:'
+                : 'What happens when you sign in:'
+              }
             </p>
             <div className="flex flex-wrap gap-2 justify-center">
               <Badge variant="secondary" className="text-xs">
-                Wallet Created
+                {isSignupPage ? 'Account Created' : 'Wallet Connected'}
               </Badge>
               <Badge variant="secondary" className="text-xs">
-                Profile Setup
+                {isSignupPage ? 'Wallet Created' : 'Profile Loaded'}
               </Badge>
               <Badge variant="secondary" className="text-xs">
                 Ready to Trade
@@ -102,7 +119,7 @@ export function LoginForm() {
 
           {/* Terms */}
           <p className="text-xs text-muted-foreground text-center">
-            By signing in, you agree to our{' '}
+            By {isSignupPage ? 'signing up' : 'signing in'}, you agree to our{' '}
             <a href="/terms" className="underline hover:text-primary">
               Terms of Service
             </a>{' '}
@@ -111,6 +128,27 @@ export function LoginForm() {
               Privacy Policy
             </a>
           </p>
+
+          {/* Navigation between login/signup */}
+          <div className="text-center pt-4 border-t">
+            <p className="text-sm text-muted-foreground">
+              {isSignupPage ? (
+                <>
+                  Already have an account?{' '}
+                  <Link href="/login" className="text-primary hover:underline font-medium">
+                    Sign in here
+                  </Link>
+                </>
+              ) : (
+                <>
+                  Don't have an account?{' '}
+                  <Link href="/signup" className="text-primary hover:underline font-medium">
+                    Sign up here
+                  </Link>
+                </>
+              )}
+            </p>
+          </div>
         </CardContent>
       </Card>
     </div>
