@@ -9,6 +9,7 @@ import { Footer } from "@/components/site/footer"
 import { Suspense } from "react"
 import { ThemeProvider } from "@/components/theme-provider"
 import { SessionProvider } from "@/components/auth/session-context"
+import { Container } from "@/components/site/container"
 
 export const metadata: Metadata = {
   title: "v0 App",
@@ -28,7 +29,9 @@ export default function RootLayout({
           <SessionProvider>
             <Suspense fallback={<div>Loading...</div>}>
               <Header />
-              <main className="min-h-dvh">{children}</main>
+              <main className="min-h-dvh pb-16 md:pb-0">
+                <Container className="py-8">{children}</Container>
+              </main>
               <Footer />
               <Analytics />
             </Suspense>
