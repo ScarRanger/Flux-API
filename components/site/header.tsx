@@ -2,66 +2,91 @@
 
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
-import { WalletWidget } from "@/components/shared/wallet-widget"
+import { Input } from "@/components/ui/input"
 import { NotificationsCenter } from "@/components/shared/notifications-center"
 import { cn } from "@/lib/utils"
 import { ThemeToggle } from "@/components/theme-toggle"
-import { useSession } from "@/components/auth/session-context"
-import { useEffect, useState } from "react"
+import { useAuth } from "@/lib/auth-context"
 
 export function Header() {
-  const { session, logout } = useSession()
-  const role = session?.role
-  const [mounted, setMounted] = useState(false)
+  const [q, setQ] = useState("")
+  const { user, dbUser, logout } = useAuth()
+  
+  const handleLogout = async () => {
+    await logout();
+  };
 
-  useEffect(() => {
-    setMounted(true)
-  }, [])
+  const isAuthenticated = !!user && !!dbUser
+  const role = dbUser?.role || null
 
   return (
-    <header className="sticky top-0 z-50 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-      <div className="flex items-center justify-between h-16 px-6 max-w-7xl mx-auto">
-        <div className="flex items-center gap-6">
-          <Link href="/" className="flex items-center gap-2 shrink-0" aria-label="Home">
-            <div className="size-8 rounded-md bg-primary" />
-            <span className="font-bold text-xl">FluxAPI</span>
+    <header className="sticky top-0 z-50 border-b bg-background/80 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+      <div className="container mx-auto flex items-center gap-3 px-4 py-3">
+        <Link href="/" className="flex items-center gap-2" aria-label="Home">
+          <div className="size-7 rounded-md bg-primary" />
+          <span className="font-semibold">Flux API</span>
+        </Link>
+
+        <nav className="ml-2 hidden items-center gap-2 md:flex" aria-label="Primary">
+          {/* removed Buy/Sell from public nav */}
+          <Link className="rounded-md px-3 py-2 text-sm hover:bg-secondary" href="/marketplace">
+            Marketplace
           </Link>
 
           <nav className="hidden items-center gap-1 lg:flex" aria-label="Primary">
             <Link className="rounded-md px-3 py-2 text-sm font-medium hover:bg-accent transition-colors" href="/marketplace">
               Marketplace
             </Link>
-            <Link className="rounded-md px-3 py-2 text-sm font-medium hover:bg-accent transition-colors" href="/node">
-              Operate
+          )}
+          {/* {role === "seller" && (
+            <Link className="rounded-md px-3 py-2 text-sm hover:bg-secondary" href="/seller">
+              My Seller Dashboard
             </Link>
-            {mounted && role === "buyer" && (
-              <Link className="rounded-md px-3 py-2 text-sm font-medium hover:bg-accent transition-colors" href="/buyer">
-                Dashboard
-              </Link>
-            )}
-          </nav>
-        </div>
+          )} */}
+        </nav>
 
-        <div className="flex items-center gap-2">
-          <div className="hidden md:flex items-center gap-2">
-            <ThemeToggle />
-            <NotificationsCenter />
-            <WalletWidget />
+        <form
+          onSubmit={(e) => e.preventDefault()}
+          role="search"
+          className="ml-auto hidden items-center gap-2 md:flex"
+          aria-label="Search APIs"
+        >
+          <div className="relative">
+            <Input
+              placeholder="Search APIs ( / )"
+              value={q}
+              onChange={(e) => setQ(e.target.value)}
+              className="w-[340px]"
+              aria-label="Search APIs"
+            />
           </div>
-          {mounted && !role ? (
+          <Button type="button" variant="secondary">
+            Search
+          </Button>
+        </form>
+
+        <div className="ml-2 flex items-center gap-2">
+          <ThemeToggle />
+          <NotificationsCenter />
+          {!role ? (
             <>
-              <Button asChild className="hidden lg:inline-flex" variant="ghost" size="sm">
-                <Link href="/login">Sign In</Link>
-              </Button>
-              <Button asChild className="hidden lg:inline-flex" size="sm">
-                <Link href="/signup">Sign Up</Link>
+              <Button asChild className="hidden md:inline-flex">
+                <Link href="/signup">Get Started</Link>
               </Button>
             </>
-          ) : mounted && role ? (
-            <Button size="sm" variant="ghost" onClick={logout} aria-label="Logout" className="hidden lg:inline-flex">
-              Logout
-            </Button>
-          ) : null}
+          ) : (
+            <>
+              <Button asChild size="sm" variant="outline">
+                <Link href="/profile">Profile</Link>
+              </Button>
+              <Button size="sm" variant="outline" onClick={handleLogout} aria-label="Logout">
+                Logout
+              </Button>
+            </>
+          )}
+          <Button asChild className="hidden md:inline-flex">
+            <Link href="/marketplace">Marketplace</Link>
+          </Button>
         </div>
       </div>
 

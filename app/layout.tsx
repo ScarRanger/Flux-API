@@ -8,13 +8,11 @@ import { Header } from "@/components/site/header"
 import { Footer } from "@/components/site/footer"
 import { Suspense } from "react"
 import { ThemeProvider } from "@/components/theme-provider"
-import { SessionProvider } from "@/components/auth/session-context"
-import { Container } from "@/components/site/container"
+import { AuthProvider } from "@/lib/auth-context"
 
 export const metadata: Metadata = {
-  title: "v0 App",
-  description: "Created with v0",
-  generator: "v0.app",
+  title: "Flux API - Decentralized API Marketplace",
+  description: "A decentralized API marketplace for seamless integration and monetization.",
 }
 
 export default function RootLayout({
@@ -26,7 +24,7 @@ export default function RootLayout({
     <html lang="en" suppressHydrationWarning className={`${GeistSans.variable} ${GeistMono.variable} antialiased`}>
       <body className="font-sans">
         <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
-          <SessionProvider>
+          <AuthProvider>
             <Suspense fallback={<div>Loading...</div>}>
               <Header />
               <main className="min-h-dvh pb-16 md:pb-0">
@@ -35,7 +33,7 @@ export default function RootLayout({
               <Footer />
               <Analytics />
             </Suspense>
-          </SessionProvider>
+          </AuthProvider>
         </ThemeProvider>
       </body>
     </html>
