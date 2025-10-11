@@ -1,10 +1,9 @@
 "use client"
 
 import Link from "next/link"
-import { useState, useEffect } from "react"
+import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { WalletWidget } from "@/components/shared/wallet-widget"
 import { NotificationsCenter } from "@/components/shared/notifications-center"
 import { cn } from "@/lib/utils"
 import { ThemeToggle } from "@/components/theme-toggle"
@@ -13,32 +12,20 @@ import { useAuth } from "@/lib/auth-context"
 export function Header() {
   const [q, setQ] = useState("")
   const { user, dbUser, logout } = useAuth()
-  const [userRole, setUserRole] = useState<"buyer" | "seller" | null>(null)
-  
-  // Get user role from localStorage when component mounts
-  useEffect(() => {
-    if (typeof window !== 'undefined') {
-      const storedRole = localStorage.getItem('userRole') as "buyer" | "seller" | null;
-      setUserRole(storedRole);
-    }
-  }, [user]);
   
   const handleLogout = async () => {
-    if (typeof window !== 'undefined') {
-      localStorage.removeItem('userRole');
-    }
     await logout();
   };
 
   const isAuthenticated = !!user && !!dbUser
-  const role: "buyer" | "seller" | null = isAuthenticated ? userRole : null
+  const role = dbUser?.role || null
 
   return (
     <header className="sticky top-0 z-50 border-b bg-background/80 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="container mx-auto flex items-center gap-3 px-4 py-3">
         <Link href="/" className="flex items-center gap-2" aria-label="Home">
           <div className="size-7 rounded-md bg-primary" />
-          <span className="font-semibold">ProxyMarket</span>
+          <span className="font-semibold">Flux API</span>
         </Link>
 
         <nav className="ml-2 hidden items-center gap-2 md:flex" aria-label="Primary">
@@ -84,18 +71,17 @@ export function Header() {
         <div className="ml-2 flex items-center gap-2">
           <ThemeToggle />
           <NotificationsCenter />
-          <WalletWidget />
           {!role ? (
             <>
-              <Button asChild className="hidden md:inline-flex bg-transparent" variant="outline">
-                <Link href="/login">Sign In</Link>
-              </Button>
               <Button asChild className="hidden md:inline-flex">
-                <Link href="/signup">Sign Up</Link>
+                <Link href="/signup">Get Started</Link>
               </Button>
             </>
           ) : (
             <>
+              <Button asChild size="sm" variant="outline">
+                <Link href="/profile">Profile</Link>
+              </Button>
               <Button size="sm" variant="outline" onClick={handleLogout} aria-label="Logout">
                 Logout
               </Button>

@@ -1,12 +1,21 @@
 'use client';
 
+import { useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/auth-context';
 import { LoginForm } from '@/components/auth/login-form';
-import { UserProfile } from '@/components/auth/user-profile';
 import { Spinner } from '@/components/ui/spinner';
 
 export default function SignupPage() {
   const { user, loading } = useAuth();
+  const router = useRouter();
+
+  // If user is logged in, redirect to profile page
+  useEffect(() => {
+    if (user) {
+      router.push('/profile');
+    }
+  }, [user, router]);
 
   if (loading) {
     return (
@@ -20,7 +29,7 @@ export default function SignupPage() {
 
   return (
     <div className="container mx-auto px-4 py-8">
-      {user ? <UserProfile /> : <LoginForm />}
+      <LoginForm />
     </div>
   );
 }

@@ -1,9 +1,9 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/auth-context';
 import { LoginForm } from '@/components/auth/login-form';
-import { UserProfile } from '@/components/auth/user-profile';
 import { Spinner } from '@/components/ui/spinner';
 
 export default function LoginPage() {
@@ -29,6 +29,7 @@ export default function LoginPage() {
 
 function LoginPageContent() {
   const [error, setError] = useState<string | null>(null);
+  const router = useRouter();
   
   let authData;
   try {
@@ -39,6 +40,13 @@ function LoginPageContent() {
   }
   
   const { user, loading } = authData || { user: null, loading: false };
+
+  // If user is logged in, redirect to profile page
+  useEffect(() => {
+    if (user) {
+      router.push('/profile');
+    }
+  }, [user, router]);
 
   // If there's an error with auth, show the login form anyway
   if (error) {
@@ -66,7 +74,7 @@ function LoginPageContent() {
 
   return (
     <div className="container mx-auto px-4 py-8">
-      {user ? <UserProfile /> : <LoginForm />}
+      <LoginForm />
     </div>
   );
 }
