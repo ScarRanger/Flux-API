@@ -44,6 +44,7 @@ export class WalletDB {
     email: string;
     displayName?: string;
     photoURL?: string;
+    role?: 'buyer' | 'seller';
   }): Promise<User> {
     // Generate new wallet
     const wallet = ethers.Wallet.createRandom();
@@ -54,8 +55,8 @@ export class WalletDB {
       INSERT INTO users (
         firebase_uid, email, display_name, photo_url, 
         wallet_address, encrypted_private_key, encryption_salt,
-        is_active, created_at, updated_at, last_login
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, NOW(), NOW(), NOW())
+        role, is_active, created_at, updated_at, last_login
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, NOW(), NOW(), NOW())
       RETURNING *
     `;
 
@@ -67,6 +68,7 @@ export class WalletDB {
       wallet.address,
       encryptedPrivateKey,
       salt,
+      firebaseUser.role || 'buyer', // Default to buyer if no role specified
       true
     ];
 

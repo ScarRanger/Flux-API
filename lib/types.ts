@@ -8,6 +8,7 @@ export interface User {
   wallet_address: string;
   encrypted_private_key: string; // Server-side only
   encryption_salt: string; // Server-side only
+  role: 'buyer' | 'seller'; // User role
   is_active: boolean;
   created_at: Date;
   updated_at: Date;

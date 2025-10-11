@@ -1,7 +1,7 @@
 "use client"
 
 import Link from "next/link"
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { WalletWidget } from "@/components/shared/wallet-widget"
@@ -13,10 +13,25 @@ import { useAuth } from "@/lib/auth-context"
 export function Header() {
   const [q, setQ] = useState("")
   const { user, dbUser, logout } = useAuth()
-  // For now, we'll treat all authenticated users as buyers
-  // You can extend this logic based on your user roles in the database
+  const [userRole, setUserRole] = useState<"buyer" | "seller" | null>(null)
+  
+  // Get user role from localStorage when component mounts
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const storedRole = localStorage.getItem('userRole') as "buyer" | "seller" | null;
+      setUserRole(storedRole);
+    }
+  }, [user]);
+  
+  const handleLogout = async () => {
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem('userRole');
+    }
+    await logout();
+  };
+
   const isAuthenticated = !!user && !!dbUser
-  const role: "buyer" | "seller" | null = isAuthenticated ? "buyer" : null // Can be "buyer", "seller", or null
+  const role: "buyer" | "seller" | null = isAuthenticated ? userRole : null
 
   return (
     <header className="sticky top-0 z-50 border-b bg-background/80 backdrop-blur supports-[backdrop-filter]:bg-background/60">
@@ -81,7 +96,7 @@ export function Header() {
             </>
           ) : (
             <>
-              <Button size="sm" variant="outline" onClick={logout} aria-label="Logout">
+              <Button size="sm" variant="outline" onClick={handleLogout} aria-label="Logout">
                 Logout
               </Button>
             </>

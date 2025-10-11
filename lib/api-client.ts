@@ -7,6 +7,7 @@ export class ApiClient {
     email: string;
     displayName?: string;
     photoURL?: string;
+    role?: 'buyer' | 'seller';
   }): Promise<User | null> {
     try {
       const response = await fetch('/api/auth/user', {
@@ -19,6 +20,7 @@ export class ApiClient {
           email: firebaseUser.email,
           displayName: firebaseUser.displayName,
           photoURL: firebaseUser.photoURL,
+          role: firebaseUser.role,
         }),
       });
 

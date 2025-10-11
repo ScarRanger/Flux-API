@@ -4,15 +4,28 @@ import Link from "next/link"
 import type { ReactNode } from "react"
 import { Card } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { useSession } from "./session-context"
+import { useAuth } from "@/lib/auth-context"
 
 export function ProtectedGate({
   children,
   allow,
 }: { children: ReactNode; allow?: Array<"buyer" | "seller" | "node"> }) {
-  const { session } = useSession()
+  const { user, dbUser, loading } = useAuth()
 
-  const allowed = !!session && (!allow || (session.role && allow.includes(session.role)))
+  // Show loading state
+  if (loading) {
+    return (
+      <section className="container mx-auto px-4 py-16">
+        <Card className="mx-auto max-w-md p-6 text-center">
+          <p>Loading...</p>
+        </Card>
+      </section>
+    )
+  }
+
+  // For now, treat all authenticated users as buyers (you can customize this logic)
+  const userRole = user && dbUser ? "buyer" : null
+  const allowed = !!user && !!dbUser && (!allow || (userRole && allow.includes(userRole)))
 
   if (!allowed) {
     return (
