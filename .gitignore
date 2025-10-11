@@ -1,2 +1,5 @@
 smart_contracts/.deps/npm/@openzeppelin/contracts
 smart_contracts/artifacts
+
+.env.local
+fluxapi-4d5bc-988f3d457f70.json
