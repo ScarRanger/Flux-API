@@ -1,12 +1,14 @@
 "use client"
 
 import { useEffect, useState } from "react"
+import { useAuth } from "@/lib/auth-context"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Progress } from "@/components/ui/progress"
 import { Badge } from "@/components/ui/badge"
+import { Alert, AlertDescription } from "@/components/ui/alert"
 
 export function ApiDetailDialog({
   open,
@@ -17,38 +19,94 @@ export function ApiDetailDialog({
   onOpenChange: (o: boolean) => void
   api: any | null
 }) {
+  const { dbUser } = useAuth()
   const [packageSize, setPackageSize] = useState<number>(1000)
-  const [status, setStatus] = useState<"idle" | "initiated" | "wallet" | "pending" | "confirming" | "success">("idle")
+  const [status, setStatus] = useState<"idle" | "checking" | "initiated" | "processing" | "confirming" | "success" | "error">("idle")
   const [confirming, setConfirming] = useState(0)
+  const [error, setError] = useState<string>("")
+  const [walletBalance, setWalletBalance] = useState<number | null>(null)
 
   useEffect(() => {
     if (!open) {
       setStatus("idle")
       setConfirming(0)
+      setError("")
     }
   }, [open])
+
+  // Fetch wallet balance when dialog opens
+  useEffect(() => {
+    async function fetchBalance() {
+      if (open && dbUser?.wallet_address) {
+        try {
+          const response = await fetch(
+            `/api/wallet/balance?address=${dbUser.wallet_address}&network=sepolia`
+          )
+          const data = await response.json()
+          if (data.success && data.data) {
+            setWalletBalance(parseFloat(data.data.formattedBalance))
+          }
+        } catch (err) {
+          console.error('Failed to fetch wallet balance:', err)
+        }
+      }
+    }
+    fetchBalance()
+  }, [open, dbUser])
 
   // Price is already in ETH from the API (converted from wei)
   const subtotal = api ? packageSize * api.pricePerCall : 0
   const platformFees = subtotal * 0.005 // 0.5% platform fee
   
-  // Calculate gas estimate based on transaction type
-  // Base gas for simple transfer: ~21,000 gas units
-  // Smart contract interaction (our case): ~100,000-150,000 gas units
-  // Average gas price: ~20 Gwei = 0.00000002 ETH
-  const gasUnits = 120000 // Typical for subscription purchase smart contract call
-  const gasPriceGwei = 20 // Current average gas price in Gwei
+  // Calculate gas estimate based on Sepolia testnet conditions
+  // Standard ETH transfer uses 21,000 gas units
+  // From Etherscan: Gas Price was ~0.00000001 Gwei (extremely low on testnet)
+  const gasUnits = 21000 // Standard ETH transfer
+  const gasPriceGwei = 0.00000005 // Very low gas price on Sepolia (~0.00000001 Gwei typical)
   const gasEstimateETH = (gasUnits * gasPriceGwei) / 1e9 // Convert to ETH
+  // Example: 21,000 * 0.00000005 / 1,000,000,000 = 0.00000000000105 ETH
   
   const total = subtotal + platformFees
 
-  function startPurchase() {
-    setStatus("initiated")
-    setTimeout(() => setStatus("wallet"), 500)
-  }
-  function approveWallet() {
-    setStatus("pending")
-    setTimeout(() => {
+  async function startPurchase() {
+    if (!dbUser) {
+      setError("Please log in to make a purchase")
+      return
+    }
+
+    // Check if wallet has sufficient balance
+    if (walletBalance !== null && walletBalance < total) {
+      setError(`Insufficient balance. You have ${walletBalance.toFixed(6)} ETH but need ${total.toFixed(6)} ETH`)
+      setStatus("error")
+      return
+    }
+
+    setError("")
+    setStatus("checking")
+    
+    try {
+      // Call purchase API
+      setStatus("processing")
+      const response = await fetch('/api/marketplace/purchase', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          buyerId: dbUser.firebase_uid,
+          listingId: api.id,
+          packageSize: packageSize,
+          totalAmount: total
+        })
+      })
+
+      const data = await response.json()
+
+      if (!response.ok || !data.success) {
+        throw new Error(data.error || 'Purchase failed')
+      }
+
+      // Simulate blockchain confirmation
       setStatus("confirming")
       let i = 0
       const t = setInterval(() => {
@@ -59,12 +117,17 @@ export function ApiDetailDialog({
           setStatus("success")
         }
       }, 300)
-    }, 1000)
+
+    } catch (err: any) {
+      console.error('Purchase error:', err)
+      setError(err.message || 'Failed to complete purchase')
+      setStatus("error")
+    }
   }
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent aria-describedby={undefined} className="max-w-4xl max-h-[90vh] overflow-y-auto">
+      <DialogContent aria-describedby={undefined} className="!max-w-[1000px] w-full max-h-[150vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="text-2xl">{api?.name}</DialogTitle>
         </DialogHeader>
@@ -196,40 +259,51 @@ export function ApiDetailDialog({
                     <span className="font-medium">{platformFees.toFixed(8)} ETH</span>
                   </div>
                   <div className="flex items-center justify-between text-sm">
-                    <span className="text-muted-foreground">Estimated Gas</span>
-                    <span className="font-medium">{gasEstimateETH.toFixed(6)} ETH</span>
+                    <span className="text-muted-foreground">Estimated Gas (testnet)</span>
+                    <span className="font-medium">~{gasEstimateETH.toExponential(3)} ETH</span>
                   </div>
                   <div className="pt-2 border-t">
                     <div className="flex items-center justify-between">
-                      <span className="font-semibold">Total</span>
+                      <span className="font-semibold">Total (excl. gas)</span>
                       <span className="text-lg font-bold">{total.toFixed(8)} ETH</span>
                     </div>
-                    <p className="text-xs text-muted-foreground mt-1">+ gas fees ({gasEstimateETH.toFixed(6)} ETH) paid separately</p>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Gas fees (~{gasEstimateETH.toExponential(2)} ETH) negligible on testnet
+                    </p>
                   </div>
                 </div>
 
+                {walletBalance !== null && (
+                  <div className="text-xs text-muted-foreground text-center">
+                    Wallet Balance: {walletBalance.toFixed(6)} ETH
+                  </div>
+                )}
+
+                {error && (
+                  <Alert variant="destructive">
+                    <AlertDescription>{error}</AlertDescription>
+                  </Alert>
+                )}
+
                 {status === "idle" && (
-                  <Button onClick={startPurchase} aria-label="Start purchase" className="w-full">
-                    Continue
+                  <Button 
+                    onClick={startPurchase} 
+                    aria-label="Start purchase" 
+                    className="w-full"
+                    disabled={!dbUser}
+                  >
+                    {dbUser ? 'Purchase Now' : 'Please log in'}
                   </Button>
                 )}
-                {status === "initiated" && (
+                {status === "checking" && (
                   <div className="space-y-3">
-                    <p className="text-sm text-center">Initiating transaction…</p>
-                    <Progress value={20} />
+                    <p className="text-sm text-center">Checking wallet balance…</p>
+                    <Progress value={10} />
                   </div>
                 )}
-                {status === "wallet" && (
+                {status === "processing" && (
                   <div className="space-y-3">
-                    <p className="text-sm text-center font-medium">Please approve in your wallet</p>
-                    <Button onClick={approveWallet} aria-label="Approve in wallet" className="w-full">
-                      Simulate Approve
-                    </Button>
-                  </div>
-                )}
-                {status === "pending" && (
-                  <div className="space-y-3">
-                    <p className="text-sm text-center">Processing transaction…</p>
+                    <p className="text-sm text-center">Processing purchase…</p>
                     <Progress value={40} />
                   </div>
                 )}
@@ -246,11 +320,23 @@ export function ApiDetailDialog({
                         ✓ Purchase Successful!
                       </p>
                       <p className="text-xs text-muted-foreground mt-1">
-                        Your API quota has been added to your account
+                        Your API quota of {packageSize.toLocaleString()} calls has been added to your account
                       </p>
                     </div>
                     <Button onClick={() => onOpenChange(false)} aria-label="Close" className="w-full">
                       Close
+                    </Button>
+                  </div>
+                )}
+                {status === "error" && (
+                  <div className="space-y-3">
+                    <Button 
+                      onClick={() => setStatus("idle")} 
+                      aria-label="Try again" 
+                      variant="outline"
+                      className="w-full"
+                    >
+                      Try Again
                     </Button>
                   </div>
                 )}
