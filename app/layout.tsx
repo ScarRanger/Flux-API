@@ -11,9 +11,8 @@ import { ThemeProvider } from "@/components/theme-provider"
 import { AuthProvider } from "@/lib/auth-context"
 
 export const metadata: Metadata = {
-  title: "v0 App",
-  description: "Created with v0",
-  generator: "v0.app",
+  title: "Flux API - Decentralized API Marketplace",
+  description: "A decentralized API marketplace for seamless integration and monetization.",
 }
 
 export default function RootLayout({

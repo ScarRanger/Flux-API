@@ -1,98 +1,197 @@
 import Link from "next/link"
+import { Github, Twitter, Mail } from "lucide-react"
 
 export function Footer() {
   return (
-    <footer className="border-t">
-      <div className="container mx-auto grid gap-8 px-4 py-12 sm:grid-cols-2 md:grid-cols-4">
-        <div>
-          <h3 className="text-sm font-semibold">Product</h3>
-          <ul className="mt-3 space-y-2 text-sm">
-            <li>
-              <Link href="/buyer" className="hover:underline">
-                Browse APIs
+    <footer className="border-t bg-secondary/20">
+      <div className="max-w-7xl mx-auto px-4 py-12 md:py-16">
+        <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-5">
+          {/* Brand Section */}
+          <div className="lg:col-span-2">
+            <Link href="/" className="flex items-center gap-2 mb-4">
+              <div className="size-8 rounded-md bg-primary" />
+              <span className="font-bold text-xl">FluxAPI</span>
+            </Link>
+            <p className="text-sm text-muted-foreground mb-6 max-w-sm">
+              The decentralized marketplace for monetizing unused API quota through
+              secure proxy routing and blockchain settlements.
+            </p>
+            <div className="flex items-center gap-3">
+              <Link
+                href="https://twitter.com"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="rounded-md p-2 hover:bg-accent transition-colors"
+                aria-label="Twitter"
+              >
+                <Twitter className="size-5" />
               </Link>
-            </li>
-            <li>
-              <Link href="/seller" className="hover:underline">
-                Start Selling
+              <Link
+                href="https://github.com"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="rounded-md p-2 hover:bg-accent transition-colors"
+                aria-label="GitHub"
+              >
               </Link>
-            </li>
-            <li>
-              <Link href="/node" className="hover:underline">
-                Run a Node
+              <Link
+                href="https://discord.com"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="rounded-md p-2 hover:bg-accent transition-colors"
+                aria-label="Discord"
+              >
               </Link>
-            </li>
-            <li>
-              <a href="#" className="hover:underline">
-                Pricing
-              </a>
-            </li>
-          </ul>
+              <Link
+                href="mailto:support@proxymarket.io"
+                className="rounded-md p-2 hover:bg-accent transition-colors"
+                aria-label="Email"
+              >
+                <Mail className="size-5" />
+              </Link>
+            </div>
+          </div>
+
+          {/* Product */}
+          <div>
+            <h3 className="font-semibold mb-4">Product</h3>
+            <ul className="space-y-3 text-sm">
+              <li>
+                <Link
+                  href="/marketplace"
+                  className="text-muted-foreground hover:text-foreground transition-colors"
+                >
+                  Marketplace
+                </Link>
+              </li>
+              <li>
+                <Link
+                  href="/node"
+                  className="text-muted-foreground hover:text-foreground transition-colors"
+                >
+                  Operate Node
+                </Link>
+              </li>
+              <li>
+                <Link
+                  href="/pricing"
+                  className="text-muted-foreground hover:text-foreground transition-colors"
+                >
+                  Pricing
+                </Link>
+              </li>
+              <li>
+                <Link
+                  href="/docs"
+                  className="text-muted-foreground hover:text-foreground transition-colors"
+                >
+                  Documentation
+                </Link>
+              </li>
+            </ul>
+          </div>
+
+          {/* Resources */}
+          <div>
+            <h3 className="font-semibold mb-4">Resources</h3>
+            <ul className="space-y-3 text-sm">
+              <li>
+                <Link
+                  href="/blog"
+                  className="text-muted-foreground hover:text-foreground transition-colors"
+                >
+                  Blog
+                </Link>
+              </li>
+              <li>
+                <Link
+                  href="/api"
+                  className="text-muted-foreground hover:text-foreground transition-colors"
+                >
+                  API Reference
+                </Link>
+              </li>
+              <li>
+                <Link
+                  href="/guides"
+                  className="text-muted-foreground hover:text-foreground transition-colors"
+                >
+                  Guides
+                </Link>
+              </li>
+              <li>
+                <Link
+                  href="/support"
+                  className="text-muted-foreground hover:text-foreground transition-colors"
+                >
+                  Support
+                </Link>
+              </li>
+            </ul>
+          </div>
+
+          {/* Company */}
+          <div>
+            <h3 className="font-semibold mb-4">Company</h3>
+            <ul className="space-y-3 text-sm">
+              <li>
+                <Link
+                  href="/about"
+                  className="text-muted-foreground hover:text-foreground transition-colors"
+                >
+                  About Us
+                </Link>
+              </li>
+              <li>
+                <Link
+                  href="/careers"
+                  className="text-muted-foreground hover:text-foreground transition-colors"
+                >
+                  Careers
+                </Link>
+              </li>
+              <li>
+                <Link
+                  href="/privacy"
+                  className="text-muted-foreground hover:text-foreground transition-colors"
+                >
+                  Privacy Policy
+                </Link>
+              </li>
+              <li>
+                <Link
+                  href="/terms"
+                  className="text-muted-foreground hover:text-foreground transition-colors"
+                >
+                  Terms of Service
+                </Link>
+              </li>
+            </ul>
+          </div>
         </div>
-        <div>
-          <h3 className="text-sm font-semibold">Resources</h3>
-          <ul className="mt-3 space-y-2 text-sm">
-            <li>
-              <a href="#" className="hover:underline">
-                Docs
-              </a>
-            </li>
-            <li>
-              <a href="#" className="hover:underline">
-                Guides
-              </a>
-            </li>
-            <li>
-              <a href="#" className="hover:underline">
-                API Status
-              </a>
-            </li>
-          </ul>
-        </div>
-        <div>
-          <h3 className="text-sm font-semibold">Company</h3>
-          <ul className="mt-3 space-y-2 text-sm">
-            <li>
-              <a href="#" className="hover:underline">
-                About
-              </a>
-            </li>
-            <li>
-              <a href="#" className="hover:underline">
-                Careers
-              </a>
-            </li>
-            <li>
-              <a href="#" className="hover:underline">
-                Security
-              </a>
-            </li>
-          </ul>
-        </div>
-        <div>
-          <h3 className="text-sm font-semibold">Community</h3>
-          <ul className="mt-3 space-y-2 text-sm">
-            <li>
-              <a href="#" className="hover:underline">
-                Discord
-              </a>
-            </li>
-            <li>
-              <a href="#" className="hover:underline">
-                X/Twitter
-              </a>
-            </li>
-            <li>
-              <a href="#" className="hover:underline">
-                Blog
-              </a>
-            </li>
-          </ul>
-        </div>
-      </div>
-      <div className="border-t">
-        <div className="container mx-auto px-4 py-6 text-xs text-muted-foreground">
-          © {new Date().getFullYear()} ProxyMarket. All rights reserved.
+
+        <div className="border-t mt-12 pt-8 flex flex-col md:flex-row items-center justify-between gap-4 text-sm text-muted-foreground">
+          <p>© {new Date().getFullYear()} FluxAPI. All rights reserved.</p>
+          <div className="flex items-center gap-6">
+            <Link
+              href="/security"
+              className="hover:text-foreground transition-colors"
+            >
+              Security
+            </Link>
+            <Link
+              href="/status"
+              className="hover:text-foreground transition-colors"
+            >
+              Status
+            </Link>
+            <Link
+              href="/audits"
+              className="hover:text-foreground transition-colors"
+            >
+              Audits
+            </Link>
+          </div>
         </div>
       </div>
     </footer>
