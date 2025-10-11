@@ -1,9 +1,24 @@
+import { NextResponse } from "next/server"
+import { MarketplaceDB } from "@/lib/db-helpers"
+
 export async function GET() {
-  const items = [
-    { id: "1", name: "WeatherPro", category: "Weather", price: "$0.0009", discount: 22, quota: "320k", rating: "4.8" },
-    { id: "2", name: "MapsXYZ", category: "Geospatial", price: "$0.0014", discount: 15, quota: "180k", rating: "4.6" },
-    { id: "3", name: "NewsFeed", category: "News", price: "$0.0005", discount: 35, quota: "500k", rating: "4.7" },
-    { id: "4", name: "SentimentAI", category: "AI", price: "$0.0031", discount: 12, quota: "95k", rating: "4.4" },
-  ]
-  return Response.json({ items }, { headers: { "Cache-Control": "no-store" } })
+  try {
+    const featured = await MarketplaceDB.getFeaturedApis(6)
+
+    return NextResponse.json({
+      success: true,
+      items: featured.map(item => ({
+        id: item.id,
+        name: item.api,
+        category: item.category || 'General',
+        price: `$${parseFloat(item.price_usd).toFixed(4)}`,
+        quota: item.quota.toLocaleString(),
+        discount: Math.round(Math.random() * 40),
+        rating: parseFloat(item.seller_rating).toFixed(1),
+      }))
+    })
+  } catch (error) {
+    console.error("Featured APIs error:", error)
+    return NextResponse.json({ error: "Failed to fetch featured APIs" }, { status: 500 })
+  }
 }

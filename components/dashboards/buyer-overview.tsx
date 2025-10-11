@@ -63,7 +63,7 @@ export default function BuyerOverview() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 max-w-[1600px] mx-auto px-4 md:px-6 lg:px-8">
       {/* Enhanced KPIs with icons and trends */}
       <section aria-label="Buyer KPIs">
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">

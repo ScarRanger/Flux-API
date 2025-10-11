@@ -1,5 +1,5 @@
 import Link from "next/link"
-import { Github, Twitter, Mail } from "lucide-react"
+import { Github, Twitter, Mail, Zap } from "lucide-react"
 
 export function Footer() {
   return (
@@ -9,8 +9,10 @@ export function Footer() {
           {/* Brand Section */}
           <div className="lg:col-span-2">
             <Link href="/" className="flex items-center gap-2 mb-4">
-              <div className="size-8 rounded-md bg-primary" />
-              <span className="font-bold text-xl">FluxAPI</span>
+              <Zap className="size-7 text-primary" fill="currentColor" />
+              <span className="font-bold text-xl bg-gradient-to-r from-primary to-purple-600 bg-clip-text text-transparent">
+                FluxAPI
+              </span>
             </Link>
             <p className="text-sm text-muted-foreground mb-6 max-w-sm">
               The decentralized marketplace for monetizing unused API quota through
@@ -33,6 +35,7 @@ export function Footer() {
                 className="rounded-md p-2 hover:bg-accent transition-colors"
                 aria-label="GitHub"
               >
+                <Github className="size-5" />
               </Link>
               <Link
                 href="https://discord.com"
@@ -43,7 +46,7 @@ export function Footer() {
               >
               </Link>
               <Link
-                href="mailto:support@proxymarket.io"
+                href="mailto:support@fluxapi.io"
                 className="rounded-md p-2 hover:bg-accent transition-colors"
                 aria-label="Email"
               >

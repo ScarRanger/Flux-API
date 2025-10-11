@@ -11,7 +11,7 @@ import { ThemeProvider } from "@/components/theme-provider"
 import { AuthProvider } from "@/lib/auth-context"
 
 export const metadata: Metadata = {
-  title: "Flux API - Decentralized API Marketplace",
+  title: "FluxAPI - Decentralized API Marketplace",
   description: "A decentralized API marketplace for seamless integration and monetization.",
 }
 
@@ -27,9 +27,7 @@ export default function RootLayout({
           <AuthProvider>
             <Suspense fallback={<div>Loading...</div>}>
               <Header />
-              <main className="min-h-dvh pb-16 md:pb-0">
-                <Container className="py-8">{children}</Container>
-              </main>
+              <main className="min-h-dvh pb-16 md:pb-0">{children}</main>
               <Footer />
               <Analytics />
             </Suspense>

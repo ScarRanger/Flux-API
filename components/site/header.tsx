@@ -1,6 +1,7 @@
 "use client"
 
 import Link from "next/link"
+import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { NotificationsCenter } from "@/components/shared/notifications-center"
@@ -32,10 +33,12 @@ export function Header() {
           <Link className="rounded-md px-3 py-2 text-sm hover:bg-secondary" href="/marketplace">
             Marketplace
           </Link>
-
-          <nav className="hidden items-center gap-1 lg:flex" aria-label="Primary">
-            <Link className="rounded-md px-3 py-2 text-sm font-medium hover:bg-accent transition-colors" href="/marketplace">
-              Marketplace
+          <Link className="rounded-md px-3 py-2 text-sm hover:bg-secondary" href="/node">
+            Operate
+          </Link>
+          {role === "buyer" && (
+            <Link className="rounded-md px-3 py-2 text-sm hover:bg-secondary" href="/buyer">
+              My Buyer Dashboard
             </Link>
           )}
           {/* {role === "seller" && (
@@ -92,25 +95,27 @@ export function Header() {
 
       {/* Mobile bottom nav */}
       <nav
-        className={cn("fixed inset-x-0 bottom-0 z-50 grid grid-cols-3 gap-2 border-t bg-background p-3 lg:hidden")}
+        className={cn("fixed inset-x-0 bottom-0 z-50 grid grid-cols-3 border-t bg-background/95 px-2 py-2 md:hidden")}
         aria-label="Mobile"
       >
-        <Link className="rounded-lg px-3 py-2 text-center text-sm font-medium hover:bg-accent transition-colors" href="/marketplace">
+        <Link className="rounded-md px-3 py-2 text-center text-sm hover:bg-secondary" href="/marketplace">
           Market
         </Link>
-        <Link className="rounded-lg px-3 py-2 text-center text-sm font-medium hover:bg-accent transition-colors" href="/node">
+        <Link className="rounded-md px-3 py-2 text-center text-sm hover:bg-secondary" href="/node">
           Operate
         </Link>
-        {mounted && !role ? (
-          <Link className="rounded-lg px-3 py-2 text-center text-sm font-medium hover:bg-accent transition-colors" href="/login">
+        {!role ? (
+          <Link className="rounded-md px-3 py-2 text-center text-sm hover:bg-secondary" href="/login">
             Login
           </Link>
-        ) : mounted && role === "buyer" ? (
-          <Link className="rounded-lg px-3 py-2 text-center text-sm font-medium hover:bg-accent transition-colors" href="/buyer">
-            Dashboard
+        ) : role === "buyer" ? (
+          <Link className="rounded-md px-3 py-2 text-center text-sm hover:bg-secondary" href="/buyer">
+            Buyer
           </Link>
         ) : (
-          <div />
+          <Link className="rounded-md px-3 py-2 text-center text-sm hover:bg-secondary" href="/seller">
+            Seller
+          </Link>
         )}
       </nav>
     </header>

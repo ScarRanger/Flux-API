@@ -2,14 +2,14 @@
 
 import { Button } from "@/components/ui/button"
 import Link from "next/link"
-import { ProtectedGate } from "@/components/auth/protected"
+// import { ProtectedGate } from "@/components/auth/protected"
 import SellerAnalytics from "@/components/dashboards/seller-analytics"
 import { Plus } from "lucide-react"
 
 export default function SellerDashboard() {
   return (
-    <ProtectedGate allow={["seller"]}>
-      <section className="container mx-auto px-4 py-16">
+    // <ProtectedGate allow={["seller"]}>
+      <section className="container mx-auto px-4 md:px-6 lg:px-8 py-16 max-w-[1600px]">
         <header className="flex items-center justify-between gap-4 mb-6">
           <div>
             <h1 className="text-2xl font-semibold tracking-tight">Seller Dashboard</h1>
@@ -32,6 +32,6 @@ export default function SellerDashboard() {
 
         <SellerAnalytics />
       </section>
-    </ProtectedGate>
+    // </ProtectedGate>
   )
 }

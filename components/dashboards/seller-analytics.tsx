@@ -4,23 +4,25 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { ChartContainer } from "@/components/ui/chart"
 import {
   ResponsiveContainer,
-  LineChart,
-  Line,
+  AreaChart,
+  Area,
   XAxis,
   YAxis,
   CartesianGrid,
   Tooltip,
-  PieChart,
-  Pie,
-  Cell,
+  RadarChart,
+  PolarGrid,
+  PolarAngleAxis,
+  PolarRadiusAxis,
+  Radar,
+  ScatterChart,
+  Scatter,
+  ZAxis,
   Legend,
-  ComposedChart,
-  Bar,
-  AreaChart,
-  Area,
+  Cell,
 } from "recharts"
 import { cn } from "@/lib/utils"
-import { DollarSign, Package, TrendingUp, Users, Zap, ArrowUpRight, Plus } from "lucide-react"
+import { DollarSign, Package, TrendingUp, Users, Zap, ArrowUpRight, Plus, Clock } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import Link from "next/link"
 
@@ -28,32 +30,33 @@ const fetcher = (url: string) => fetch(url).then((r) => r.json())
 
 export default function SellerAnalytics() {
   const { data } = useSWR("/api/dashboard/seller", fetcher, { revalidateOnFocus: false })
+  
   if (!data) {
     return (
       <div className="grid gap-4 md:grid-cols-5">
         {Array.from({ length: 5 }).map((_, i) => (
-          <Card key={i} className="h-24 animate-pulse bg-muted/40" aria-busy="true" aria-live="polite" />
+          <Card key={i} className="h-32 animate-pulse bg-muted/40" aria-busy="true" aria-live="polite" />
         ))}
       </div>
     )
   }
 
   const palette = {
-    primary: "#F59E0B", // amber-500
-    secondary: "#EC4899", // pink-500
-    accent: "#8B5CF6", // violet-500
-    success: "#10B981", // emerald-500
-    chart: ["#F59E0B", "#EC4899", "#8B5CF6", "#10B981", "#3B82F6"],
+    primary: "#F59E0B",
+    secondary: "#EC4899", 
+    accent: "#8B5CF6",
+    success: "#10B981",
+    info: "#3B82F6",
   }
 
   function CustomTooltip({ active, payload, label }: any) {
-    if (!active || !payload || !payload.length) return null
+    if (!active || !payload?.length) return null
     return (
-      <div className="rounded-lg border bg-card p-3 text-sm shadow-lg">
-        <div className="font-semibold mb-1">{label}</div>
+      <div className="rounded-lg border bg-card p-3 text-sm shadow-xl">
+        <div className="font-semibold mb-2">{label}</div>
         {payload.map((p: any, i: number) => (
-          <div key={i} className="flex items-center gap-2">
-            <div className="size-2.5 rounded-full" style={{ background: p.color }} />
+          <div key={i} className="flex items-center gap-2 mt-1">
+            <div className="size-3 rounded-full" style={{ background: p.color }} />
             <span className="text-muted-foreground">{p.name}:</span>
             <span className="font-bold">{p.value}</span>
           </div>
@@ -63,268 +66,232 @@ export default function SellerAnalytics() {
   }
 
   return (
-    <div className="space-y-6">
-      {/* Enhanced KPIs with List API Button */}
-      <section aria-label="Seller KPIs">
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-2xl font-bold">Performance Overview</h2>
-          <Button asChild size="lg" className="gap-2">
-            <Link href="/seller/list-api">
-              <Plus className="size-4" />
-              List New API
-            </Link>
-          </Button>
-        </div>
+    <div className="space-y-6 max-w-[1600px] mx-auto px-4 md:px-6 lg:px-8">
+      {/* Revenue Metrics Cards */}
+      <section aria-label="Revenue metrics">
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
-          <StatCard
-            title="Total Earnings"
+          <MetricCard
+            title="Monthly Revenue"
             value={`$${data.kpis.earningsUsd.toFixed(2)}`}
             change="+18.2%"
             icon={DollarSign}
-            color="from-amber-500 to-orange-600"
-            borderColor="#f59e0b"
+            gradient="from-amber-500 via-orange-500 to-amber-600"
           />
-          <StatCard
+          <MetricCard
             title="Active Listings"
             value={String(data.kpis.activeListings)}
-            change="+12"
+            change="+12 this week"
             icon={Package}
-            color="from-pink-500 to-rose-600"
-            borderColor="#ec4899"
+            gradient="from-pink-500 via-rose-500 to-pink-600"
           />
-          <StatCard
-            title="Calls Served"
+          <MetricCard
+            title="Total Calls"
             value={formatNumber(data.kpis.callsServed)}
             change="+24.3%"
             icon={TrendingUp}
-            color="from-violet-500 to-purple-600"
-            borderColor="#8b5cf6"
+            gradient="from-violet-500 via-purple-500 to-violet-600"
           />
-          <StatCard
-            title="Avg Price/Call"
-            value={`$${data.kpis.avgPricePerCallUsd.toFixed(3)}`}
+          <MetricCard
+            title="Avg Price"
+            value={`$${data.kpis.avgPricePerCallUsd.toFixed(4)}`}
             change="+5.1%"
             icon={Zap}
-            color="from-emerald-500 to-teal-600"
-            borderColor="#10b981"
+            gradient="from-emerald-500 via-teal-500 to-emerald-600"
           />
-          <StatCard
-            title="Quota Available"
+          <MetricCard
+            title="Available Quota"
             value={formatNumber(data.kpis.quotaAvailable)}
-            change="+8.9%"
-            icon={Users}
-            color="from-blue-500 to-cyan-600"
-            borderColor="#3b82f6"
+            change="Updated now"
+            icon={Clock}
+            gradient="from-blue-500 via-cyan-500 to-blue-600"
           />
         </div>
       </section>
 
-      {/* Earnings trend with area chart */}
-      <section aria-label="Earnings trend">
-        <Card className="border-l-4 border-l-amber-500">
+      {/* Revenue Trend & API Performance Radar */}
+      <section className="grid gap-4 lg:grid-cols-5" aria-label="Revenue analysis">
+        <Card className="lg:col-span-3 ">
           <CardHeader className="pb-2">
             <div className="flex items-center justify-between">
               <div>
-                <CardTitle className="text-2xl">Revenue Analytics</CardTitle>
-                <CardDescription>Track your earnings performance over time</CardDescription>
+                <CardTitle className="text-2xl">Revenue Trends</CardTitle>
+                <CardDescription>Daily earnings breakdown</CardDescription>
               </div>
-              <div className="text-right">
-                <div className="text-2xl font-bold text-amber-600">${data.kpis.earningsUsd.toFixed(2)}</div>
-                <div className="text-sm text-muted-foreground">Last 14 days</div>
-              </div>
+              <Button asChild size="sm" className="gap-2">
+                <Link href="/seller/list-api">
+                  <Plus className="size-4" />
+                  List API
+                </Link>
+              </Button>
             </div>
           </CardHeader>
           <CardContent>
-            <ChartContainer
-              config={{ earnings: { label: "Earnings", color: palette.primary } }}
-              className="h-[320px]"
-            >
+            <ChartContainer config={{ earnings: { label: "Earnings", color: palette.primary } }} className="h-[350px]">
               <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={data.earningsOverTime} margin={{ top: 8, right: 16, bottom: 8, left: 0 }}>
+                <AreaChart data={data.earningsOverTime} margin={{ top: 10, right: 10, bottom: 0, left: 0 }}>
                   <defs>
-                    <linearGradient id="earningsGradient" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="0%" stopColor={palette.primary} stopOpacity={0.4} />
-                      <stop offset="100%" stopColor={palette.primary} stopOpacity={0.05} />
+                    <linearGradient id="revenueGrad" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor={palette.primary} stopOpacity={0.8}/>
+                      <stop offset="95%" stopColor={palette.primary} stopOpacity={0}/>
                     </linearGradient>
                   </defs>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#94A3B8" opacity={0.3} />
-                  <XAxis dataKey="date" tick={{ fill: "#94A3B8" }} />
-                  <YAxis tick={{ fill: "#94A3B8" }} />
+                  <CartesianGrid strokeDasharray="3 3" stroke="#94A3B8" opacity={0.2} />
+                  <XAxis dataKey="date" tick={{ fill: "#94A3B8", fontSize: 12 }} />
+                  <YAxis tick={{ fill: "#94A3B8", fontSize: 12 }} />
                   <Tooltip content={<CustomTooltip />} />
-                  <Area
-                    type="monotone"
-                    dataKey="earnings"
-                    stroke={palette.primary}
+                  <Area 
+                    type="monotone" 
+                    dataKey="earnings" 
+                    stroke={palette.primary} 
                     strokeWidth={3}
-                    fill="url(#earningsGradient)"
+                    fillOpacity={1} 
+                    fill="url(#revenueGrad)" 
                   />
                 </AreaChart>
               </ResponsiveContainer>
             </ChartContainer>
           </CardContent>
         </Card>
+
+        <Card className="lg:col-span-2">
+          <CardHeader className="pb-2">
+            <CardTitle>API Performance</CardTitle>
+            <CardDescription>Multi-metric analysis</CardDescription>
+          </CardHeader>
+          <CardContent className="flex items-center justify-center">
+            <RadarChart width={320} height={320} data={data.listings.slice(0, 5).map((l: any) => ({
+              api: l.api.slice(0, 10),
+              quota: l.quota / 100,
+              earnings: l.earningsUsd,
+              price: l.priceUsd * 1000,
+            }))}>
+              <PolarGrid stroke={palette.accent} opacity={0.3} />
+              <PolarAngleAxis dataKey="api" tick={{ fill: "#94A3B8", fontSize: 11 }} />
+              <PolarRadiusAxis angle={90} domain={[0, 'auto']} tick={{ fill: "#94A3B8", fontSize: 10 }} />
+              <Radar name="Quota" dataKey="quota" stroke={palette.secondary} fill={palette.secondary} fillOpacity={0.6} />
+              <Radar name="Earnings" dataKey="earnings" stroke={palette.accent} fill={palette.accent} fillOpacity={0.6} />
+              <Tooltip content={<CustomTooltip />} />
+              <Legend />
+            </RadarChart>
+          </CardContent>
+        </Card>
       </section>
 
-      {/* API Performance & Revenue Distribution */}
-      <section className="grid gap-4 lg:grid-cols-2" aria-label="API performance">
-        <Card className="border-l-4 border-l-pink-500">
+      {/* API Scatter Plot & Top Buyers */}
+      <section className="grid gap-4 lg:grid-cols-2" aria-label="Performance insights">
+        <Card className="">
           <CardHeader className="pb-2">
-            <CardTitle>API Performance Overview</CardTitle>
-            <CardDescription>Quota, earnings and pricing metrics</CardDescription>
+            <CardTitle>API Value Matrix</CardTitle>
+            <CardDescription>Price vs Volume analysis</CardDescription>
           </CardHeader>
           <CardContent>
-            <ChartContainer
-              config={{
-                quota: { label: "Quota", color: palette.secondary },
-                earnings: { label: "Earnings", color: palette.accent },
-                price: { label: "Price", color: palette.primary },
-              }}
-              className="h-[300px]"
-            >
+            <ChartContainer config={{}} className="h-[300px]">
               <ResponsiveContainer width="100%" height="100%">
-                <ComposedChart
-                  data={data.listings.map((l: any) => ({
-                    api: l.api,
-                    quota: l.quota,
-                    earnings: l.earningsUsd,
-                    price: l.priceUsd * 1000,
-                  }))}
-                  margin={{ top: 8, right: 16, bottom: 8, left: 0 }}
-                >
-                  <defs>
-                    <linearGradient id="barGrad1" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="0%" stopColor={palette.secondary} stopOpacity={0.8} />
-                      <stop offset="100%" stopColor={palette.secondary} stopOpacity={0.3} />
-                    </linearGradient>
-                    <linearGradient id="barGrad2" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="0%" stopColor={palette.accent} stopOpacity={0.8} />
-                      <stop offset="100%" stopColor={palette.accent} stopOpacity={0.3} />
-                    </linearGradient>
-                  </defs>
+                <ScatterChart margin={{ top: 20, right: 20, bottom: 20, left: 20 }}>
                   <CartesianGrid strokeDasharray="3 3" stroke="#94A3B8" opacity={0.3} />
-                  <XAxis dataKey="api" tick={{ fill: "#94A3B8" }} />
-                  <YAxis yAxisId="left" tick={{ fill: "#94A3B8" }} />
-                  <YAxis yAxisId="right" orientation="right" tick={{ fill: "#94A3B8" }} />
-                  <Tooltip content={<CustomTooltip />} />
+                  <XAxis type="number" dataKey="quota" name="Quota" tick={{ fill: "#94A3B8" }} />
+                  <YAxis type="number" dataKey="earnings" name="Revenue" tick={{ fill: "#94A3B8" }} />
+                  <ZAxis type="number" dataKey="price" name="Price" range={[50, 400]} />
+                  <Tooltip cursor={{ strokeDasharray: '3 3' }} content={<CustomTooltip />} />
                   <Legend />
-                  <Bar yAxisId="left" dataKey="quota" name="Quota" fill="url(#barGrad1)" radius={[8, 8, 0, 0]} />
-                  <Bar yAxisId="left" dataKey="earnings" name="Earnings" fill="url(#barGrad2)" radius={[8, 8, 0, 0]} />
-                  <Line
-                    yAxisId="right"
-                    type="monotone"
-                    dataKey="price"
-                    name="Price"
-                    stroke={palette.primary}
-                    strokeWidth={3}
-                    dot={{ fill: palette.primary, r: 4 }}
-                  />
-                </ComposedChart>
+                  <Scatter 
+                    name="APIs" 
+                    data={data.listings.map((l: any) => ({
+                      quota: l.quota,
+                      earnings: l.earningsUsd,
+                      price: l.priceUsd * 1000,
+                    }))} 
+                    fill={palette.secondary}
+                  >
+                    {data.listings.map((_: any, i: number) => (
+                      <Cell key={i} fill={`hsl(${(i * 360) / data.listings.length}, 70%, 60%)`} />
+                    ))}
+                  </Scatter>
+                </ScatterChart>
               </ResponsiveContainer>
             </ChartContainer>
           </CardContent>
         </Card>
 
-        <Card className="border-l-4 border-l-violet-500">
+        <Card className="">
           <CardHeader className="pb-2">
-            <CardTitle>Revenue Distribution</CardTitle>
-            <CardDescription>Income breakdown by API</CardDescription>
+            <CardTitle>Top Performing Buyers</CardTitle>
+            <CardDescription>Highest revenue contributors</CardDescription>
           </CardHeader>
-          <CardContent className="flex items-center justify-center">
-            <PieChart width={360} height={280}>
-              <Pie
-                data={data.revenueByApi}
-                dataKey="value"
-                nameKey="api"
-                cx="50%"
-                cy="50%"
-                innerRadius={70}
-                outerRadius={110}
-                paddingAngle={2}
-                label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
-              >
-                {data.revenueByApi.map((_: any, i: number) => (
-                  <Cell key={i} fill={palette.chart[i % palette.chart.length]} />
-                ))}
-              </Pie>
-              <Tooltip content={<CustomTooltip />} />
-            </PieChart>
+          <CardContent>
+            <div className="space-y-3">
+              {data.topBuyers.slice(0, 5).map((b: any, idx: number) => (
+                <div key={b.buyer} className="flex items-center gap-3 p-3 rounded-lg border hover:bg-accent/50 transition-colors">
+                  <div className="flex items-center justify-center size-10 rounded-full bg-gradient-to-br from-amber-500 to-orange-600 text-white font-bold">
+                    #{idx + 1}
+                  </div>
+                  <div className="flex-1">
+                    <div className="font-semibold">{b.buyer}</div>
+                    <div className="text-xs text-muted-foreground">{formatNumber(b.calls)} calls</div>
+                  </div>
+                  <div className="text-right">
+                    <div className="font-bold text-amber-600">${b.spendUsd.toFixed(2)}</div>
+                    {b.returning && (
+                      <div className="flex items-center gap-1 text-xs text-emerald-600">
+                        <ArrowUpRight className="size-3" />
+                        Repeat
+                      </div>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
           </CardContent>
         </Card>
       </section>
 
-      {/* Listings & Top Buyers */}
-      <section className="grid gap-4 lg:grid-cols-2" aria-label="Listings and buyers">
-        <Card className="border-l-4 border-l-emerald-500">
+      {/* Listings Table */}
+      <section aria-label="Active listings">
+        <Card className="">
           <CardHeader className="pb-2">
-            <CardTitle>Active Listings</CardTitle>
-            <CardDescription>Manage your API offerings</CardDescription>
+            <CardTitle>Active API Listings</CardTitle>
+            <CardDescription>Manage and monitor your offerings</CardDescription>
           </CardHeader>
           <CardContent className="overflow-x-auto">
             <table className="w-full text-sm">
-              <thead className="text-muted-foreground border-b">
-                <tr className="[&>th]:py-3 [&>th]:text-left [&>th]:font-semibold">
-                  <th>API</th>
+              <thead className="border-b">
+                <tr className="[&>th]:py-3 [&>th]:text-left [&>th]:font-semibold [&>th]:text-muted-foreground">
+                  <th>API Name</th>
                   <th>Status</th>
-                  <th>Price</th>
+                  <th>Price/Call</th>
                   <th>Quota</th>
                   <th>Revenue</th>
+                  <th>Performance</th>
                 </tr>
               </thead>
               <tbody>
                 {data.listings.map((l: any) => (
-                  <tr key={l.api} className="border-b hover:bg-muted/50 transition-colors">
-                    <td className="py-3 font-medium">{l.api}</td>
+                  <tr key={l.api} className="border-b hover:bg-muted/30 transition-colors">
+                    <td className="py-4 font-semibold">{l.api}</td>
                     <td>
-                      <span
-                        className={cn(
-                          "inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-semibold",
-                          l.status === "active"
-                            ? "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400"
-                            : "bg-amber-500/15 text-amber-700 dark:text-amber-400",
-                        )}
-                      >
-                        <div className={cn("size-1.5 rounded-full", l.status === "active" ? "bg-emerald-500" : "bg-amber-500")} />
+                      <span className={cn(
+                        "inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-bold",
+                        l.status === "active" 
+                          ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400"
+                          : "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400"
+                      )}>
+                        <div className={cn("size-2 rounded-full", l.status === "active" ? "bg-emerald-500" : "bg-amber-500")} />
                         {l.status}
                       </span>
                     </td>
-                    <td className="font-mono">${l.priceUsd.toFixed(3)}</td>
-                    <td>{formatNumber(l.quota)}</td>
-                    <td className="font-semibold text-amber-600">${l.earningsUsd.toFixed(2)}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </CardContent>
-        </Card>
-
-        <Card className="border-l-4 border-l-blue-500">
-          <CardHeader className="pb-2">
-            <CardTitle>Top Buyers</CardTitle>
-            <CardDescription>Your best customers</CardDescription>
-          </CardHeader>
-          <CardContent className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead className="text-muted-foreground border-b">
-                <tr className="[&>th]:py-3 [&>th]:text-left [&>th]:font-semibold">
-                  <th>Buyer</th>
-                  <th>Calls</th>
-                  <th>Spend</th>
-                  <th>Status</th>
-                </tr>
-              </thead>
-              <tbody>
-                {data.topBuyers.map((b: any) => (
-                  <tr key={b.buyer} className="border-b hover:bg-muted/50 transition-colors">
-                    <td className="py-3 font-medium">{b.buyer}</td>
-                    <td>{formatNumber(b.calls)}</td>
-                    <td className="font-semibold text-pink-600">${b.spendUsd.toFixed(2)}</td>
+                    <td className="font-mono text-primary">${l.priceUsd.toFixed(4)}</td>
+                    <td className="font-medium">{formatNumber(l.quota)}</td>
+                    <td className="font-bold text-amber-600">${l.earningsUsd.toFixed(2)}</td>
                     <td>
-                      {b.returning && (
-                        <span className="inline-flex items-center gap-1 text-xs text-emerald-600">
-                          <ArrowUpRight className="size-3" />
-                          Returning
-                        </span>
-                      )}
+                      <div className="flex items-center gap-2">
+                        <div className="flex-1 h-2 bg-muted rounded-full overflow-hidden">
+                          <div 
+                            className="h-full bg-gradient-to-r from-emerald-500 to-teal-500" 
+                            style={{ width: `${Math.min((l.earningsUsd / data.kpis.earningsUsd) * 100, 100)}%` }}
+                          />
+                        </div>
+                        <span className="text-xs font-medium">{Math.round((l.earningsUsd / data.kpis.earningsUsd) * 100)}%</span>
+                      </div>
                     </td>
                   </tr>
                 ))}
@@ -337,24 +304,22 @@ export default function SellerAnalytics() {
   )
 }
 
-function StatCard(props: { title: string; value: string; change: string; icon: any; color: string; borderColor: string }) {
+function MetricCard(props: { title: string; value: string; change: string; icon: any; gradient: string }) {
   const Icon = props.icon
-
+  
   return (
-    <Card className="relative overflow-hidden hover:shadow-xl transition-all border-t-4" style={{ borderTopColor: props.borderColor }}>
-      <div className={cn("absolute top-0 right-0 w-24 h-24 bg-gradient-to-br opacity-10 rounded-full -mr-12 -mt-12", props.color)} />
+    <Card className="relative overflow-hidden group hover:shadow-2xl transition-all duration-300">
+      <div className={cn("absolute inset-0 bg-gradient-to-br opacity-5 group-hover:opacity-10 transition-opacity", props.gradient)} />
       <CardContent className="p-6">
-        <div className="flex items-center justify-between mb-3">
-          <p className="text-sm font-medium text-muted-foreground">{props.title}</p>
-          <div className={cn("rounded-lg p-2 bg-gradient-to-br", props.color)}>
-            <Icon className="size-5 text-white" />
+        <div className="flex items-start justify-between mb-4">
+          <div className={cn("rounded-xl p-3 bg-gradient-to-br shadow-lg", props.gradient)}>
+            <Icon className="size-6 text-white" />
           </div>
         </div>
-        <div className="flex items-baseline justify-between">
-          <p className="text-3xl font-bold">{props.value}</p>
-          <span className="text-sm font-semibold text-emerald-600 dark:text-emerald-400">
-            {props.change}
-          </span>
+        <div>
+          <p className="text-sm font-medium text-muted-foreground mb-1">{props.title}</p>
+          <p className="text-3xl font-bold mb-1">{props.value}</p>
+          <p className="text-xs font-semibold text-emerald-600 dark:text-emerald-400">{props.change}</p>
         </div>
       </CardContent>
     </Card>
