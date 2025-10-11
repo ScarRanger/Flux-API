@@ -10,7 +10,7 @@ export function ProtectedGate({
   children,
   allow,
 }: { children: ReactNode; allow?: Array<"buyer" | "seller" | "node"> }) {
-  const { user, dbUser, loading } = useAuth()
+  const { user, dbUser, loading, showRoleSelection } = useAuth()
 
   // Show loading state
   if (loading) {
@@ -18,6 +18,17 @@ export function ProtectedGate({
       <section className="container mx-auto px-4 py-16">
         <Card className="mx-auto max-w-md p-6 text-center">
           <p>Loading...</p>
+        </Card>
+      </section>
+    )
+  }
+
+  // If role selection is in progress, show loading
+  if (showRoleSelection) {
+    return (
+      <section className="container mx-auto px-4 py-16">
+        <Card className="mx-auto max-w-md p-6 text-center">
+          <p>Setting up your account...</p>
         </Card>
       </section>
     )

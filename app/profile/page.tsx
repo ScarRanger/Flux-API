@@ -12,7 +12,7 @@ import { fetchWalletBalanceFromAPI, formatBalance, formatBalanceNumber, isLowBal
 import { Wallet, User, LogOut, ArrowLeft, RefreshCw, AlertTriangle, ExternalLink } from "lucide-react"
 
 export default function ProfilePage() {
-  const { user, dbUser, logout } = useAuth()
+  const { user, dbUser, logout, showRoleSelection } = useAuth()
   const { walletAddress, createWalletInstance } = useWallet()
   const router = useRouter()
   const [balance, setBalance] = useState<string>("0")
@@ -22,6 +22,11 @@ export default function ProfilePage() {
   const [isRefreshing, setIsRefreshing] = useState(false)
 
   useEffect(() => {
+    // Don't redirect if role selection is in progress
+    if (showRoleSelection) {
+      return
+    }
+
     if (!user || !dbUser) {
       router.push("/login")
       return

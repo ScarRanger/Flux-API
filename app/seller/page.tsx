@@ -1,8 +1,7 @@
 "use client"
 
 import { Button } from "@/components/ui/button"
-import Link from "next/link"
-// import { ProtectedGate } from "@/components/auth/protected"
+import { ProtectedGate } from "@/components/auth/protected"
 import SellerAnalytics from "@/components/dashboards/seller-analytics"
 import Link from "next/dist/client/link"
 import { Plus } from "lucide-react"
@@ -24,6 +23,6 @@ export default function SellerDashboard() {
 
         <SellerAnalytics />
       </section>
-    // </ProtectedGate>
+    </ProtectedGate>
   )
 }

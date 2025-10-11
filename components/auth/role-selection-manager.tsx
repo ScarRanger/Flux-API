@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/auth-context';
 import { RoleSelectionDialog } from './role-selection-dialog';
@@ -13,10 +13,12 @@ export function RoleSelectionManager() {
     dbUser 
   } = useAuth();
   const router = useRouter();
+  const [hasRedirected, setHasRedirected] = useState(false);
 
   // Redirect user after role selection completes
   useEffect(() => {
-    if (dbUser && !showRoleSelection) {
+    if (dbUser && !showRoleSelection && !hasRedirected) {
+      setHasRedirected(true);
       // Redirect based on role
       if (dbUser.role === 'seller') {
         router.push('/seller');
@@ -24,7 +26,14 @@ export function RoleSelectionManager() {
         router.push('/buyer');
       }
     }
-  }, [dbUser, showRoleSelection, router]);
+  }, [dbUser, showRoleSelection, router, hasRedirected]);
+
+  // Reset redirect flag when role selection opens again
+  useEffect(() => {
+    if (showRoleSelection) {
+      setHasRedirected(false);
+    }
+  }, [showRoleSelection]);
 
   const handleRoleSelect = async (role: 'buyer' | 'seller') => {
     await handleRoleSelection(role);
