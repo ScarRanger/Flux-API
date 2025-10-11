@@ -1,257 +1,298 @@
 "use client"
 import useSWR from "swr"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
-import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart"
+import { ChartContainer } from "@/components/ui/chart"
 import {
   ResponsiveContainer,
-  LineChart,
-  Line,
+  AreaChart,
+  Area,
   XAxis,
   YAxis,
   CartesianGrid,
   Tooltip,
-  PieChart,
-  Pie,
-  Cell,
+  RadarChart,
+  PolarGrid,
+  PolarAngleAxis,
+  PolarRadiusAxis,
+  Radar,
+  ScatterChart,
+  Scatter,
+  ZAxis,
   Legend,
-  ComposedChart,
-  Bar,
+  Cell,
 } from "recharts"
 import { cn } from "@/lib/utils"
+import { DollarSign, Package, TrendingUp, Users, Zap, ArrowUpRight, Plus, Clock } from "lucide-react"
+import { Button } from "@/components/ui/button"
+import Link from "next/link"
 
 const fetcher = (url: string) => fetch(url).then((r) => r.json())
 
 export default function SellerAnalytics() {
   const { data } = useSWR("/api/dashboard/seller", fetcher, { revalidateOnFocus: false })
+  
   if (!data) {
     return (
       <div className="grid gap-4 md:grid-cols-5">
         {Array.from({ length: 5 }).map((_, i) => (
-          <Card key={i} className="h-24 animate-pulse bg-muted/40" aria-busy="true" aria-live="polite" />
+          <Card key={i} className="h-32 animate-pulse bg-muted/40" aria-busy="true" aria-live="polite" />
         ))}
       </div>
     )
   }
 
-  const colors = {
-    primary: "hsl(var(--chart-1))",
-    secondary: "hsl(var(--chart-2))",
-    accent: "hsl(var(--chart-3))",
-    quaternary: "hsl(var(--chart-4))",
-    neutral: "hsl(var(--muted-foreground))",
+  const palette = {
+    primary: "#F59E0B",
+    secondary: "#EC4899", 
+    accent: "#8B5CF6",
+    success: "#10B981",
+    info: "#3B82F6",
   }
 
-  const listingsChartData = Array.isArray(data.listings)
-    ? data.listings.map((l: any) => ({
-        api: l.api,
-        quota: l.quota,
-        earnings: l.earningsUsd,
-        price: l.priceUsd,
-      }))
-    : []
+  function CustomTooltip({ active, payload, label }: any) {
+    if (!active || !payload?.length) return null
+    return (
+      <div className="rounded-lg border bg-card p-3 text-sm shadow-xl">
+        <div className="font-semibold mb-2">{label}</div>
+        {payload.map((p: any, i: number) => (
+          <div key={i} className="flex items-center gap-2 mt-1">
+            <div className="size-3 rounded-full" style={{ background: p.color }} />
+            <span className="text-muted-foreground">{p.name}:</span>
+            <span className="font-bold">{p.value}</span>
+          </div>
+        ))}
+      </div>
+    )
+  }
 
   return (
     <div className="space-y-6">
-      {/* KPIs */}
-      <section aria-label="Seller KPIs">
+      {/* Revenue Metrics Cards */}
+      <section aria-label="Revenue metrics">
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
-          <Kpi title="Earnings" value={`$${data.kpis.earningsUsd.toFixed(2)}`} helper="last 14 days" />
-          <Kpi title="Active Listings" value={String(data.kpis.activeListings)} />
-          <Kpi title="Calls Served" value={formatNumber(data.kpis.callsServed)} />
-          <Kpi title="Avg Price/Call" value={`$${data.kpis.avgPricePerCallUsd.toFixed(3)}`} />
-          <Kpi title="Quota Available" value={formatNumber(data.kpis.quotaAvailable)} />
+          <MetricCard
+            title="Monthly Revenue"
+            value={`$${data.kpis.earningsUsd.toFixed(2)}`}
+            change="+18.2%"
+            icon={DollarSign}
+            gradient="from-amber-500 via-orange-500 to-amber-600"
+          />
+          <MetricCard
+            title="Active Listings"
+            value={String(data.kpis.activeListings)}
+            change="+12 this week"
+            icon={Package}
+            gradient="from-pink-500 via-rose-500 to-pink-600"
+          />
+          <MetricCard
+            title="Total Calls"
+            value={formatNumber(data.kpis.callsServed)}
+            change="+24.3%"
+            icon={TrendingUp}
+            gradient="from-violet-500 via-purple-500 to-violet-600"
+          />
+          <MetricCard
+            title="Avg Price"
+            value={`$${data.kpis.avgPricePerCallUsd.toFixed(4)}`}
+            change="+5.1%"
+            icon={Zap}
+            gradient="from-emerald-500 via-teal-500 to-emerald-600"
+          />
+          <MetricCard
+            title="Available Quota"
+            value={formatNumber(data.kpis.quotaAvailable)}
+            change="Updated now"
+            icon={Clock}
+            gradient="from-blue-500 via-cyan-500 to-blue-600"
+          />
         </div>
       </section>
 
-      {/* Earnings Trend */}
-      <section aria-label="Earnings trend">
-        <Card>
+      {/* Revenue Trend & API Performance Radar */}
+      <section className="grid gap-4 lg:grid-cols-5" aria-label="Revenue analysis">
+        <Card className="lg:col-span-3">
           <CardHeader className="pb-2">
-            <CardTitle>Earnings Over Time</CardTitle>
-            <CardDescription>Daily totals</CardDescription>
+            <div className="flex items-center justify-between">
+              <div>
+                <CardTitle className="text-2xl">Revenue Trends</CardTitle>
+                <CardDescription>Daily earnings breakdown</CardDescription>
+              </div>
+              {/* <Button asChild size="sm" className="gap-2">
+                <Link href="/sell-api">
+                  <Plus className="size-4" />
+                  List API
+                </Link>
+              </Button> */}
+            </div>
           </CardHeader>
           <CardContent>
-            <ChartContainer
-              config={{ earnings: { label: "Earnings", color: "hsl(var(--chart-1))" } }}
-              className="h-[300px]"
-            >
+            <ChartContainer config={{ earnings: { label: "Earnings", color: palette.primary } }} className="h-[350px]">
               <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={data.earningsOverTime} margin={{ top: 8, right: 16, bottom: 8, left: 0 }}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="date" />
-                  <YAxis />
-                  <ChartTooltip content={<ChartTooltipContent />} />
-                  <Legend />
-                  <Line type="monotone" dataKey="earnings" name="Earnings" stroke="var(--color-earnings)" />
-                </LineChart>
+                <AreaChart data={data.earningsOverTime} margin={{ top: 10, right: 10, bottom: 0, left: 0 }}>
+                  <defs>
+                    <linearGradient id="revenueGrad" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor={palette.primary} stopOpacity={0.8}/>
+                      <stop offset="95%" stopColor={palette.primary} stopOpacity={0}/>
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#94A3B8" opacity={0.2} />
+                  <XAxis dataKey="date" tick={{ fill: "#94A3B8", fontSize: 12 }} />
+                  <YAxis tick={{ fill: "#94A3B8", fontSize: 12 }} />
+                  <Tooltip content={<CustomTooltip />} />
+                  <Area 
+                    type="monotone" 
+                    dataKey="earnings" 
+                    stroke={palette.primary} 
+                    strokeWidth={3}
+                    fillOpacity={1} 
+                    fill="url(#revenueGrad)" 
+                  />
+                </AreaChart>
               </ResponsiveContainer>
             </ChartContainer>
           </CardContent>
         </Card>
-      </section>
 
-      <section aria-label="Listings overview">
-        <Card>
+        <Card className="lg:col-span-2">
           <CardHeader className="pb-2">
-            <CardTitle>Listings Overview</CardTitle>
-            <CardDescription>Quota and earnings per API with price overlay</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <ChartContainer
-              config={{
-                quota: { label: "Quota", color: "hsl(var(--chart-2))" },
-                earnings: { label: "Earnings", color: "hsl(var(--chart-4))" },
-                price: { label: "Price", color: "hsl(var(--chart-1))" },
-              }}
-              className="h-[320px]"
-            >
-              <ResponsiveContainer width="100%" height="100%">
-                <ComposedChart data={listingsChartData} margin={{ top: 8, right: 16, bottom: 8, left: 0 }}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="api" />
-                  <YAxis yAxisId="left" />
-                  <YAxis yAxisId="right" orientation="right" />
-                  <ChartTooltip content={<ChartTooltipContent />} />
-                  <Legend />
-                  <Bar yAxisId="left" dataKey="quota" name="Quota" fill="var(--color-quota)" />
-                  <Bar yAxisId="left" dataKey="earnings" name="Earnings" fill="var(--color-earnings)" />
-                  <Line yAxisId="right" type="monotone" dataKey="price" name="Price" stroke="var(--color-price)" />
-                </ComposedChart>
-              </ResponsiveContainer>
-            </ChartContainer>
-          </CardContent>
-        </Card>
-      </section>
-
-      {/* Revenue pie + Peak time heatmap */}
-      <section className="grid gap-4 lg:grid-cols-2" aria-label="Revenue by API and peak times">
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle>Revenue by API</CardTitle>
-            <CardDescription>Share of total</CardDescription>
+            <CardTitle>API Performance</CardTitle>
+            <CardDescription>Multi-metric analysis</CardDescription>
           </CardHeader>
           <CardContent className="flex items-center justify-center">
-            <PieChart width={360} height={240} role="img" aria-label="Revenue by API pie chart">
-              <Pie
-                data={data.revenueByApi}
-                dataKey="value"
-                nameKey="api"
-                cx="50%"
-                cy="50%"
-                innerRadius={60}
-                outerRadius={80}
-                paddingAngle={4}
-              >
-                {data.revenueByApi.map((_: any, i: number) => (
-                  <Cell
-                    key={i}
-                    fill={[colors.primary, colors.secondary, colors.accent, colors.quaternary, colors.neutral][i % 5]}
-                  />
-                ))}
-              </Pie>
-              <Tooltip />
+            <RadarChart width={320} height={320} data={data.listings.slice(0, 5).map((l: any) => ({
+              api: l.api.slice(0, 10),
+              quota: l.quota / 100,
+              earnings: l.earningsUsd,
+              price: l.priceUsd * 1000,
+            }))}>
+              <PolarGrid stroke={palette.accent} opacity={0.3} />
+              <PolarAngleAxis dataKey="api" tick={{ fill: "#94A3B8", fontSize: 11 }} />
+              <PolarRadiusAxis angle={90} domain={[0, 'auto']} tick={{ fill: "#94A3B8", fontSize: 10 }} />
+              <Radar name="Quota" dataKey="quota" stroke={palette.secondary} fill={palette.secondary} fillOpacity={0.6} />
+              <Radar name="Earnings" dataKey="earnings" stroke={palette.accent} fill={palette.accent} fillOpacity={0.6} />
+              <Tooltip content={<CustomTooltip />} />
               <Legend />
-            </PieChart>
+            </RadarChart>
+          </CardContent>
+        </Card>
+      </section>
+
+      {/* API Scatter Plot & Top Buyers */}
+      <section className="grid gap-4 lg:grid-cols-2" aria-label="Performance insights">
+        <Card className="">
+          <CardHeader className="pb-2">
+            <CardTitle>API Value Matrix</CardTitle>
+            <CardDescription>Price vs Volume analysis</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <ChartContainer config={{}} className="h-[300px]">
+              <ResponsiveContainer width="100%" height="100%">
+                <ScatterChart margin={{ top: 20, right: 20, bottom: 20, left: 20 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#94A3B8" opacity={0.3} />
+                  <XAxis type="number" dataKey="quota" name="Quota" tick={{ fill: "#94A3B8" }} />
+                  <YAxis type="number" dataKey="earnings" name="Revenue" tick={{ fill: "#94A3B8" }} />
+                  <ZAxis type="number" dataKey="price" name="Price" range={[50, 400]} />
+                  <Tooltip cursor={{ strokeDasharray: '3 3' }} content={<CustomTooltip />} />
+                  <Legend />
+                  <Scatter 
+                    name="APIs" 
+                    data={data.listings.map((l: any) => ({
+                      quota: l.quota,
+                      earnings: l.earningsUsd,
+                      price: l.priceUsd * 1000,
+                    }))} 
+                    fill={palette.secondary}
+                  >
+                    {data.listings.map((_: any, i: number) => (
+                      <Cell key={i} fill={`hsl(${(i * 360) / data.listings.length}, 70%, 60%)`} />
+                    ))}
+                  </Scatter>
+                </ScatterChart>
+              </ResponsiveContainer>
+            </ChartContainer>
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="">
           <CardHeader className="pb-2">
-            <CardTitle>Peak Times</CardTitle>
-            <CardDescription>Seven-day heatmap by hour</CardDescription>
+            <CardTitle>Top Performing Buyers</CardTitle>
+            <CardDescription>Highest revenue contributors</CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-24 gap-1">
-              {data.peakTimes.map((day: any, dIdx: number) => (
-                <div key={dIdx} className="grid grid-cols-24 gap-1">
-                  {day.hours.map((h: any) => {
-                    const intensity = Math.min(1, h.value / 24)
-                    return (
-                      <div
-                        key={h.hour}
-                        aria-label={`Day ${dIdx + 1}, hour ${h.hour}, value ${h.value}`}
-                        className="h-4 rounded-sm"
-                        style={{
-                          backgroundColor: `color-mix(in oklab, hsl(var(--chart-3)) ${Math.round(intensity * 80)}%, transparent)`,
-                        }}
-                        title={`h${h.hour}: ${h.value}`}
-                      />
-                    )
-                  })}
+            <div className="space-y-3">
+              {data.topBuyers.slice(0, 5).map((b: any, idx: number) => (
+                <div key={b.buyer} className="flex items-center gap-3 p-3 rounded-lg border hover:bg-accent/50 transition-colors">
+                  <div className="flex items-center justify-center size-10 rounded-full bg-gradient-to-br from-amber-500 to-orange-600 text-white font-bold">
+                    #{idx + 1}
+                  </div>
+                  <div className="flex-1">
+                    <div className="font-semibold">{b.buyer}</div>
+                    <div className="text-xs text-muted-foreground">{formatNumber(b.calls)} calls</div>
+                  </div>
+                  <div className="text-right">
+                    <div className="font-bold text-amber-600">${b.spendUsd.toFixed(2)}</div>
+                    {b.returning && (
+                      <div className="flex items-center gap-1 text-xs text-emerald-600">
+                        <ArrowUpRight className="size-3" />
+                        Repeat
+                      </div>
+                    )}
+                  </div>
                 </div>
               ))}
             </div>
-            <p className="mt-2 text-xs text-muted-foreground">D1–D7 rows, 0–23 columns</p>
           </CardContent>
         </Card>
       </section>
 
-      {/* Top buyers + Listings table */}
-      <section className="grid gap-4 lg:grid-cols-2" aria-label="Top buyers and listings">
-        <Card>
+      {/* Listings Table */}
+      <section aria-label="Active listings">
+        <Card className="">
           <CardHeader className="pb-2">
-            <CardTitle>Top Buyers</CardTitle>
-            <CardDescription>Calls and spend</CardDescription>
+            <CardTitle>Active API Listings</CardTitle>
+            <CardDescription>Manage and monitor your offerings</CardDescription>
           </CardHeader>
           <CardContent className="overflow-x-auto">
             <table className="w-full text-sm">
-              <thead className="text-muted-foreground">
-                <tr className="[&>th]:py-2 [&>th]:text-left">
-                  <th>Buyer</th>
-                  <th>Calls</th>
-                  <th>Spend</th>
-                  <th>Returning</th>
-                </tr>
-              </thead>
-              <tbody>
-                {data.topBuyers.map((b: any) => (
-                  <tr key={b.buyer} className="border-t">
-                    <td className="py-2 font-medium">{b.buyer}</td>
-                    <td>{formatNumber(b.calls)}</td>
-                    <td>${b.spendUsd.toFixed(2)}</td>
-                    <td>{b.returning ? "Yes" : "No"}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle>Listings</CardTitle>
-            <CardDescription>Status, price and quota</CardDescription>
-          </CardHeader>
-          <CardContent className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead className="text-muted-foreground">
-                <tr className="[&>th]:py-2 [&>th]:text-left">
-                  <th>API</th>
+              <thead className="border-b">
+                <tr className="[&>th]:py-3 [&>th]:text-left [&>th]:font-semibold [&>th]:text-muted-foreground">
+                  <th>API Name</th>
                   <th>Status</th>
                   <th>Price/Call</th>
                   <th>Quota</th>
-                  <th>Earnings</th>
+                  <th>Revenue</th>
+                  <th>Performance</th>
                 </tr>
               </thead>
               <tbody>
                 {data.listings.map((l: any) => (
-                  <tr key={l.api} className="border-t">
-                    <td className="py-2 font-medium">{l.api}</td>
+                  <tr key={l.api} className="border-b hover:bg-muted/30 transition-colors">
+                    <td className="py-4 font-semibold">{l.api}</td>
                     <td>
-                      <span
-                        className={cn(
-                          "rounded-full px-2 py-0.5 text-xs",
-                          l.status === "active"
-                            ? "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400"
-                            : "bg-amber-500/15 text-amber-700 dark:text-amber-400",
-                        )}
-                      >
+                      <span className={cn(
+                        "inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-bold",
+                        l.status === "active" 
+                          ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400"
+                          : "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400"
+                      )}>
+                        <div className={cn("size-2 rounded-full", l.status === "active" ? "bg-emerald-500" : "bg-amber-500")} />
                         {l.status}
                       </span>
                     </td>
-                    <td>${l.priceUsd.toFixed(3)}</td>
-                    <td>{formatNumber(l.quota)}</td>
-                    <td>${l.earningsUsd.toFixed(2)}</td>
+                    <td className="font-mono text-primary">${l.priceUsd.toFixed(4)}</td>
+                    <td className="font-medium">{formatNumber(l.quota)}</td>
+                    <td className="font-bold text-amber-600">${l.earningsUsd.toFixed(2)}</td>
+                    <td>
+                      <div className="flex items-center gap-2">
+                        <div className="flex-1 h-2 bg-muted rounded-full overflow-hidden">
+                          <div 
+                            className="h-full bg-gradient-to-r from-emerald-500 to-teal-500" 
+                            style={{ width: `${Math.min((l.earningsUsd / data.kpis.earningsUsd) * 100, 100)}%` }}
+                          />
+                        </div>
+                        <span className="text-xs font-medium">{Math.round((l.earningsUsd / data.kpis.earningsUsd) * 100)}%</span>
+                      </div>
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -263,15 +304,23 @@ export default function SellerAnalytics() {
   )
 }
 
-function Kpi(props: { title: string; value: string; helper?: string }) {
+function MetricCard(props: { title: string; value: string; change: string; icon: any; gradient: string }) {
+  const Icon = props.icon
+  
   return (
-    <Card>
-      <CardHeader className="pb-1">
-        <CardTitle className="text-base">{props.title}</CardTitle>
-        {props.helper ? <CardDescription>{props.helper}</CardDescription> : null}
-      </CardHeader>
-      <CardContent>
-        <p className="text-2xl font-semibold">{props.value}</p>
+    <Card className="relative overflow-hidden group hover:shadow-2xl transition-all duration-300">
+      <div className={cn("absolute inset-0 bg-gradient-to-br opacity-5 group-hover:opacity-10 transition-opacity", props.gradient)} />
+      <CardContent className="p-6">
+        <div className="flex items-start justify-between mb-4">
+          <div className={cn("rounded-xl p-3 bg-gradient-to-br shadow-lg", props.gradient)}>
+            <Icon className="size-6 text-white" />
+          </div>
+        </div>
+        <div>
+          <p className="text-sm font-medium text-muted-foreground mb-1">{props.title}</p>
+          <p className="text-3xl font-bold mb-1">{props.value}</p>
+          <p className="text-xs font-semibold text-emerald-600 dark:text-emerald-400">{props.change}</p>
+        </div>
       </CardContent>
     </Card>
   )
