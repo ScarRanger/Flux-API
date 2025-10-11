@@ -1,0 +1,62 @@
+import { NextResponse } from "next/server"
+
+export async function GET() {
+  const listings = [
+    {
+      id: "weatherpro",
+      name: "WeatherPro",
+      category: "Weather",
+      pricePerCall: 0.0009,
+      discount: 12,
+      quotaAvailable: 180000,
+      sellerRating: 4.6,
+      latencyMs: 120,
+      location: "EU",
+      logo: "/placeholder-logo.png",
+      reputation: 872,
+      description:
+        "Accurate global weather data with hourly and daily endpoints. Supports rate limiting and regional routing.",
+      endpoints: ["GET /weather/current", "GET /weather/forecast", "GET /weather/historical"],
+      rateLimit: "100 req/s",
+      seller: { name: "Proxy Labs", sales: 1320 },
+      terms: { refund: "Pro-rated refunds within 72 hours", sla: "99.9% uptime", restrictions: "No scraping" },
+    },
+    {
+      id: "mapsxyz",
+      name: "MapsXYZ",
+      category: "Maps",
+      pricePerCall: 0.0014,
+      discount: 18,
+      quotaAvailable: 90000,
+      sellerRating: 4.3,
+      latencyMs: 95,
+      location: "US",
+      logo: "/placeholder-logo.png",
+      reputation: 803,
+      description: "Maps and geocoding with high performance routing through our secure proxy network.",
+      endpoints: ["GET /geocode", "GET /reverse", "GET /route"],
+      rateLimit: "60 req/s",
+      seller: { name: "GeoNet", sales: 860 },
+      terms: { refund: "No refunds on consumed calls", sla: "99.95% uptime", restrictions: "No bulk export" },
+    },
+    {
+      id: "newsfeed",
+      name: "NewsFeed",
+      category: "News",
+      pricePerCall: 0.0005,
+      discount: 10,
+      quotaAvailable: 250000,
+      sellerRating: 4.7,
+      latencyMs: 140,
+      location: "APAC",
+      logo: "/placeholder-logo.png",
+      reputation: 910,
+      description: "Real-time news aggregation with topic filters and webhooks for push updates.",
+      endpoints: ["GET /news/top", "GET /news/search", "GET /news/sources"],
+      rateLimit: "120 req/s",
+      seller: { name: "Streamly", sales: 2320 },
+      terms: { refund: "Refunds on failed routes only", sla: "99.9% uptime", restrictions: "No redistribution" },
+    },
+  ]
+  return NextResponse.json({ listings })
+}
