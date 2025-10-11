@@ -8,6 +8,8 @@ import { NotificationsCenter } from "@/components/shared/notifications-center"
 import { cn } from "@/lib/utils"
 import { ThemeToggle } from "@/components/theme-toggle"
 import { useAuth } from "@/lib/auth-context"
+import { Zap } from "lucide-react"
+
 
 export function Header() {
   const [q, setQ] = useState("")
@@ -23,10 +25,13 @@ export function Header() {
   return (
     <header className="sticky top-0 z-50 border-b bg-background/80 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="container mx-auto flex items-center gap-3 px-4 py-3">
-        <Link href="/" className="flex items-center gap-2" aria-label="Home">
-          <div className="size-7 rounded-md bg-primary" />
-          <span className="font-semibold">Flux API</span>
-        </Link>
+      
+           <Link href="/" className="flex items-center gap-2">
+              <Zap className="size-7 text-primary" fill="currentColor" />
+              <span className="font-bold text-xl bg-gradient-to-r from-primary to-purple-600 bg-clip-text text-transparent">
+                FluxAPI
+              </span>
+            </Link>
 
         <nav className="ml-2 hidden items-center gap-2 md:flex" aria-label="Primary">
           {/* removed Buy/Sell from public nav */}
