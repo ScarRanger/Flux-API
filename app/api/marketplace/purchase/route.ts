@@ -199,9 +199,24 @@ export async function POST(req: NextRequest) {
         WHERE id = $2
       `, [packageSize, listingId])
 
-      // 8. Update buyer's api_quotas (if using the token-based system)
-      // Note: The existing api_quotas table uses a different schema (owner_user_id as UUID)
-      // We'll record this in api_calls for now
+      // 8. Generate API access credentials for the buyer
+      const crypto = await import('crypto')
+      const accessKey = `bnb_${crypto.randomBytes(32).toString('hex')}`
+      
+      const accessResult = await client.query(`
+        INSERT INTO api_access (
+          buyer_uid,
+          listing_id,
+          purchase_id,
+          access_key,
+          total_quota,
+          remaining_quota,
+          status
+        ) VALUES ($1, $2, $3, $4, $5, $5, 'active')
+        RETURNING id, access_key, total_quota, remaining_quota
+      `, [buyerId, listingId, purchase.id, accessKey, packageSize])
+
+      const apiAccess = accessResult.rows[0]
       
       await client.query('COMMIT')
 
@@ -216,6 +231,16 @@ export async function POST(req: NextRequest) {
           transactionHash: transactionHash,
           sellerWallet: listing.seller_wallet,
           createdAt: purchase.created_at
+        },
+        apiAccess: {
+          accessKey: apiAccess.access_key,
+          totalQuota: apiAccess.total_quota,
+          remainingQuota: apiAccess.remaining_quota,
+          gatewayUrl: `${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/api/gateway/call`,
+          usage: {
+            header: 'X-BNB-API-Key',
+            example: `curl -X POST ${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/api/gateway/call -H "X-BNB-API-Key: ${apiAccess.access_key}" -H "Content-Type: application/json" -d '{"method":"GET","path":"/endpoint"}'`
+          }
         }
       })
 
