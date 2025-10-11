@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { WalletDB } from '@/lib/database';
+import { adminAuth } from '@/lib/firebase-admin';
 
 export async function POST(request: NextRequest) {
   try {

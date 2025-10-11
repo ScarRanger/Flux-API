@@ -1,3 +1,5 @@
+'use client';
+
 import { Pool } from 'pg';
 import { ethers } from 'ethers';
 import crypto from 'crypto';
