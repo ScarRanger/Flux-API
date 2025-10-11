@@ -21,11 +21,18 @@ import {
 } from "recharts"
 import { cn } from "@/lib/utils"
 import { TrendingUp, TrendingDown, DollarSign, Activity, Package, Zap } from "lucide-react"
+import { useAuth } from "@/lib/auth-context"
 
 const fetcher = (url: string) => fetch(url).then((r) => r.json())
 
 export default function BuyerOverview() {
-  const { data } = useSWR("/api/dashboard/buyer", fetcher, { revalidateOnFocus: false })
+  const { dbUser } = useAuth()
+  const { data } = useSWR(
+    dbUser?.id ? `/api/dashboard/buyer?userId=${dbUser.id}` : null, 
+    fetcher, 
+    { revalidateOnFocus: false }
+  )
+  
   if (!data) {
     return (
       <div className="grid gap-4 md:grid-cols-4">
@@ -179,28 +186,28 @@ export default function BuyerOverview() {
             <div className="flex items-center justify-between p-4 rounded-lg bg-blue-500/10 border border-blue-500/20">
               <div>
                 <p className="text-xs text-muted-foreground">Avg Response Time</p>
-                <p className="text-2xl font-bold">142ms</p>
+                <p className="text-2xl font-bold">{data.quickStats.avgResponseTimeMs}ms</p>
               </div>
               <Activity className="size-10 text-blue-500" />
             </div>
             <div className="flex items-center justify-between p-4 rounded-lg bg-green-500/10 border border-green-500/20">
               <div>
                 <p className="text-xs text-muted-foreground">Success Rate</p>
-                <p className="text-2xl font-bold">99.2%</p>
+                <p className="text-2xl font-bold">{(data.quickStats.successRate * 100).toFixed(1)}%</p>
               </div>
               <TrendingUp className="size-10 text-green-500" />
             </div>
             <div className="flex items-center justify-between p-4 rounded-lg bg-purple-500/10 border border-purple-500/20">
               <div>
                 <p className="text-xs text-muted-foreground">Total Requests</p>
-                <p className="text-2xl font-bold">847K</p>
+                <p className="text-2xl font-bold">{formatNumber(data.quickStats.totalRequests)}</p>
               </div>
               <Zap className="size-10 text-purple-500" />
             </div>
             <div className="flex items-center justify-between p-4 rounded-lg bg-orange-500/10 border border-orange-500/20">
               <div>
                 <p className="text-xs text-muted-foreground">Cost per Call</p>
-                <p className="text-2xl font-bold">$0.0012</p>
+                <p className="text-2xl font-bold">${data.quickStats.costPerCall.toFixed(4)}</p>
               </div>
               <DollarSign className="size-10 text-orange-500" />
             </div>

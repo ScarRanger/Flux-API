@@ -1,10 +1,12 @@
 "use client"
 
+import { useEffect, useState } from "react"
 import { Card } from "@/components/ui/card"
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select"
 import { Slider } from "@/components/ui/slider"
 
 type Filters = { category: string; location: string; maxPrice: number }
+
 export function ApiFilters({
   value,
   onChange,
@@ -12,6 +14,28 @@ export function ApiFilters({
   value: Filters
   onChange: (f: Filters) => void
 }) {
+  const [filterOptions, setFilterOptions] = useState<{
+    categories: string[]
+    regions: string[]
+    priceRange: { min: number; max: number }
+  }>({
+    categories: ["All"],
+    regions: ["All"],
+    priceRange: { min: 0, max: 0.005 }
+  })
+
+  useEffect(() => {
+    // Fetch dynamic filter options
+    fetch("/api/marketplace/filters")
+      .then(r => r.json())
+      .then(data => {
+        setFilterOptions(data)
+      })
+      .catch(err => {
+        console.error("Error fetching filter options:", err)
+      })
+  }, [])
+
   return (
     <Card className="p-4 space-y-4" role="region" aria-label="Filters">
       <div className="space-y-2">
@@ -21,10 +45,9 @@ export function ApiFilters({
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="All">All</SelectItem>
-            <SelectItem value="Weather">Weather</SelectItem>
-            <SelectItem value="Maps">Maps</SelectItem>
-            <SelectItem value="News">News</SelectItem>
+            {filterOptions.categories.map(cat => (
+              <SelectItem key={cat} value={cat}>{cat}</SelectItem>
+            ))}
           </SelectContent>
         </Select>
       </div>
@@ -36,10 +59,9 @@ export function ApiFilters({
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="All">All</SelectItem>
-            <SelectItem value="US">US</SelectItem>
-            <SelectItem value="EU">EU</SelectItem>
-            <SelectItem value="APAC">APAC</SelectItem>
+            {filterOptions.regions.map(region => (
+              <SelectItem key={region} value={region}>{region}</SelectItem>
+            ))}
           </SelectContent>
         </Select>
       </div>
@@ -47,11 +69,11 @@ export function ApiFilters({
       <div className="space-y-2">
         <p className="text-sm text-muted-foreground">Max price per call</p>
         <Slider
-          min={0}
-          max={0.005}
+          min={filterOptions.priceRange.min}
+          max={filterOptions.priceRange.max}
           step={0.0001}
           value={[value.maxPrice]}
-          onValueChange={([v]) => onChange({ ...value, maxPrice: v })}
+          onValueChange={([v]: number[]) => onChange({ ...value, maxPrice: v })}
           aria-label="Max price per call slider"
         />
         <p className="text-xs text-muted-foreground">{value.maxPrice ? `$${value.maxPrice.toFixed(4)}` : "Any"}</p>
@@ -59,3 +81,4 @@ export function ApiFilters({
     </Card>
   )
 }
+
