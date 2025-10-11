@@ -8,12 +8,18 @@ export function Footer() {
         <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-5">
           {/* Brand Section */}
           <div className="lg:col-span-2">
-            <Link href="/" className="flex items-center gap-2 mb-4">
-              <Zap className="size-7 text-primary" fill="currentColor" />
-              <span className="font-bold text-xl bg-gradient-to-r from-primary to-purple-600 bg-clip-text text-transparent">
-                FluxAPI
-              </span>
-            </Link>
+              <Link href="/" className="flex items-center gap-2.5 group">
+            <div className="relative">
+              <div className="absolute inset-0 bg-cyan-400/20 blur-xl rounded-full " />
+              <div className="relative bg-gradient-to-br from-cyan-400 to-cyan-600 p-2 rounded-xl ">
+                <Zap className="size-5 text-white" fill="currentColor" />
+              </div>
+            </div>
+            <span className="font-bold text-xl text-white">
+              FluxAPI
+            </span>
+          </Link>
+
             <p className="text-sm text-muted-foreground mb-6 max-w-sm">
               The decentralized marketplace for monetizing unused API quota through
               secure proxy routing and blockchain settlements.
