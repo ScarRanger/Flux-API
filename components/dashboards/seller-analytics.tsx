@@ -117,12 +117,12 @@ export default function SellerAnalytics() {
                 <CardTitle className="text-2xl">Revenue Trends</CardTitle>
                 <CardDescription>Daily earnings breakdown</CardDescription>
               </div>
-              <Button asChild size="sm" className="gap-2">
-                <Link href="/seller/list-api">
+              {/* <Button asChild size="sm" className="gap-2">
+                <Link href="/sell-api">
                   <Plus className="size-4" />
                   List API
                 </Link>
-              </Button>
+              </Button> */}
             </div>
           </CardHeader>
           <CardContent>

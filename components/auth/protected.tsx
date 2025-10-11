@@ -23,7 +23,8 @@ export function ProtectedGate({
     )
   }
 
-const allowed = user && (!allow || (dbUser && allow.includes(dbUser.role)))
+  // For now, treat all authenticated users as buyers (you can customize this logic)
+  const allowed = user && (!allow || (dbUser && allow.includes(dbUser.role)))
 
   if (!allowed) {
     return (
