@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
 
 # dependencies
@@ -25,3 +26,10 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+=======
+smart_contracts/.deps/npm/@openzeppelin/contracts
+smart_contracts/artifacts
+
+.env.local
+fluxapi-4d5bc-988f3d457f70.json
+>>>>>>> 622ab8bdeb61436388039c9997024b32b6313b9c
