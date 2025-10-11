@@ -66,7 +66,7 @@ export default function SellerAnalytics() {
   }
 
   return (
-    <div className="space-y-6 max-w-[1600px] mx-auto px-4 md:px-6 lg:px-8">
+    <div className="space-y-6">
       {/* Revenue Metrics Cards */}
       <section aria-label="Revenue metrics">
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
@@ -110,19 +110,19 @@ export default function SellerAnalytics() {
 
       {/* Revenue Trend & API Performance Radar */}
       <section className="grid gap-4 lg:grid-cols-5" aria-label="Revenue analysis">
-        <Card className="lg:col-span-3 ">
+        <Card className="lg:col-span-3">
           <CardHeader className="pb-2">
             <div className="flex items-center justify-between">
               <div>
                 <CardTitle className="text-2xl">Revenue Trends</CardTitle>
                 <CardDescription>Daily earnings breakdown</CardDescription>
               </div>
-              <Button asChild size="sm" className="gap-2">
-                <Link href="/seller/list-api">
+              {/* <Button asChild size="sm" className="gap-2">
+                <Link href="/sell-api">
                   <Plus className="size-4" />
                   List API
                 </Link>
-              </Button>
+              </Button> */}
             </div>
           </CardHeader>
           <CardContent>

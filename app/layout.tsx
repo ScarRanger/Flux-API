@@ -9,6 +9,7 @@ import { Footer } from "@/components/site/footer"
 import { Suspense } from "react"
 import { ThemeProvider } from "@/components/theme-provider"
 import { AuthProvider } from "@/lib/auth-context"
+import { RoleSelectionManager } from "@/components/auth/role-selection-manager"
 
 export const metadata: Metadata = {
   title: "FluxAPI - Decentralized API Marketplace",
@@ -25,6 +26,7 @@ export default function RootLayout({
       <body className="font-sans">
         <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
           <AuthProvider>
+            <RoleSelectionManager />
             <Suspense fallback={<div>Loading...</div>}>
               <Header />
               <main className="min-h-dvh pb-16 md:pb-0">{children}</main>

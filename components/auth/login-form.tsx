@@ -13,7 +13,6 @@ import { Wallet, LogIn, Shield, Zap } from 'lucide-react';
 export function LoginForm() {
   const { signInWithGoogle, loading } = useAuth();
   const [isSigningIn, setIsSigningIn] = useState(false);
-  const [selectedRole, setSelectedRole] = useState<'buyer' | 'seller'>('buyer');
   const router = useRouter();
   const pathname = usePathname();
   
@@ -25,15 +24,9 @@ export function LoginForm() {
       setIsSigningIn(true);
       await signInWithGoogle();
       
-      // Store the selected role in localStorage for now (you can enhance this later)
-      localStorage.setItem('userRole', selectedRole);
+      // The role selection dialog will be shown by the auth provider if needed
+      // Otherwise user will be redirected based on their existing role
       
-      // Redirect based on role
-      if (selectedRole === 'seller') {
-        router.push('/seller');
-      } else {
-        router.push('/buyer');
-      }
     } catch (error) {
       console.error('Sign in failed:', error);
       // You could show a toast notification here
@@ -69,53 +62,6 @@ export function LoginForm() {
         </CardHeader>
         
         <CardContent className="space-y-6">
-          {/* Role Selection */}
-          <div className="space-y-3">
-            <label className="text-sm font-medium">I am a:</label>
-            <div className="grid grid-cols-2 gap-3">
-              <label className={`
-                flex cursor-pointer items-center gap-3 rounded-lg border p-4 transition-colors
-                ${selectedRole === 'buyer' ? 'border-primary bg-primary/5' : 'border-border hover:bg-muted/50'}
-              `}>
-                <input
-                  type="radio"
-                  name="role"
-                  value="buyer"
-                  checked={selectedRole === 'buyer'}
-                  onChange={() => setSelectedRole('buyer')}
-                  className="sr-only"
-                />
-                <div className="flex items-center gap-2">
-                  <div className={`w-2 h-2 rounded-full ${selectedRole === 'buyer' ? 'bg-primary' : 'bg-muted-foreground'}`} />
-                  <span className="text-sm font-medium">Buyer</span>
-                </div>
-              </label>
-              <label className={`
-                flex cursor-pointer items-center gap-3 rounded-lg border p-4 transition-colors
-                ${selectedRole === 'seller' ? 'border-primary bg-primary/5' : 'border-border hover:bg-muted/50'}
-              `}>
-                <input
-                  type="radio"
-                  name="role"
-                  value="seller"
-                  checked={selectedRole === 'seller'}
-                  onChange={() => setSelectedRole('seller')}
-                  className="sr-only"
-                />
-                <div className="flex items-center gap-2">
-                  <div className={`w-2 h-2 rounded-full ${selectedRole === 'seller' ? 'bg-primary' : 'bg-muted-foreground'}`} />
-                  <span className="text-sm font-medium">Seller</span>
-                </div>
-              </label>
-            </div>
-            <p className="text-xs text-muted-foreground">
-              {selectedRole === 'buyer' 
-                ? 'Purchase API quotas and manage your consumption'
-                : 'List your APIs and earn from quota sales'
-              }
-            </p>
-          </div>
-
           {/* Features */}
           <div className="space-y-3">
             <div className="flex items-center gap-3 text-sm">

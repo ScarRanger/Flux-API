@@ -8,7 +8,11 @@ export class ApiClient {
     displayName?: string;
     photoURL?: string;
     role?: 'buyer' | 'seller';
-  }): Promise<User | null> {
+  }): Promise<{
+    user: User | null;
+    isNewUser: boolean;
+    requiresRoleSelection: boolean;
+  }> {
     try {
       const response = await fetch('/api/auth/user', {
         method: 'POST',
@@ -28,11 +32,19 @@ export class ApiClient {
         throw new Error('Failed to fetch user data');
       }
 
-      const userData = await response.json();
-      return userData.user;
+      const data = await response.json();
+      return {
+        user: data.user || null,
+        isNewUser: data.isNewUser || false,
+        requiresRoleSelection: data.requiresRoleSelection || false,
+      };
     } catch (error) {
       console.error('Error fetching user data:', error);
-      return null;
+      return {
+        user: null,
+        isNewUser: false,
+        requiresRoleSelection: false,
+      };
     }
   }
 
@@ -52,6 +64,31 @@ export class ApiClient {
     } catch (error) {
       console.error('Error updating last login:', error);
       return false;
+    }
+  }
+
+  static async updateUserRole(firebaseUID: string, role: 'buyer' | 'seller'): Promise<{ success: boolean; user?: User }> {
+    try {
+      const response = await fetch('/api/auth/update-role', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          firebaseUID,
+          role,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to update user role');
+      }
+
+      const data = await response.json();
+      return { success: data.success, user: data.user };
+    } catch (error) {
+      console.error('Error updating user role:', error);
+      return { success: false };
     }
   }
 
