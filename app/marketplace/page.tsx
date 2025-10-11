@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { ApiCard } from "@/components/marketplace/api-card"
+import { ApiDetailDialog } from "@/components/marketplace/api-detail-dialog"
 import { Search, Filter } from "lucide-react"
 
 const fetcher = (url: string) => fetch(url).then((r) => r.json())
@@ -119,6 +120,15 @@ export default function MarketplacePage() {
         <div className="mt-8 text-center text-sm text-muted-foreground">
           Showing {apis.length} API{apis.length !== 1 ? 's' : ''}
         </div>
+      )}
+
+      {/* API Detail Dialog */}
+      {selectedApi && (
+        <ApiDetailDialog
+          api={selectedApi}
+          open={!!selectedApi}
+          onOpenChange={(open) => !open && setSelectedApi(null)}
+        />
       )}
     </section>
   )

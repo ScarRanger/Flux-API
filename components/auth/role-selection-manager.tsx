@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, usePathname } from 'next/navigation';
 import { useAuth } from '@/lib/auth-context';
 import { RoleSelectionDialog } from './role-selection-dialog';
 
@@ -13,12 +13,22 @@ export function RoleSelectionManager() {
     dbUser 
   } = useAuth();
   const router = useRouter();
-  const [hasRedirected, setHasRedirected] = useState(false);
+  const pathname = usePathname();
+  const [hasRedirected, setHasRedirected] = useState(() => {
+    // Initialize from sessionStorage to persist across navigation
+    if (typeof window !== 'undefined') {
+      return sessionStorage.getItem('role_redirect_done') === 'true';
+    }
+    return false;
+  });
 
   // Redirect user after role selection completes
   useEffect(() => {
     if (dbUser && !showRoleSelection && !hasRedirected) {
+      // Mark as redirected in both state and sessionStorage
       setHasRedirected(true);
+      sessionStorage.setItem('role_redirect_done', 'true');
+      
       // Redirect based on role
       if (dbUser.role === 'seller') {
         router.push('/seller');
@@ -32,6 +42,7 @@ export function RoleSelectionManager() {
   useEffect(() => {
     if (showRoleSelection) {
       setHasRedirected(false);
+      sessionStorage.removeItem('role_redirect_done');
     }
   }, [showRoleSelection]);
 

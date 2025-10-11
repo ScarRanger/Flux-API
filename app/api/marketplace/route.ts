@@ -10,7 +10,7 @@ export async function GET() {
         al.api_name as name,
         al.description,
         al.categories,
-        al.price_per_call as price_wei,
+        al.price_per_call,
         al.quota_available,
         al.quota_sold,
         al.base_endpoint,
@@ -31,7 +31,8 @@ export async function GET() {
 
     // Transform database records to match frontend format
     const listings = result.rows.map((row: any) => {
-      const pricePerCall = parseFloat(row.price_wei) / 1e18
+      // price_per_call is already stored in ETH in the database, no conversion needed
+      const pricePerCall = parseFloat(row.price_per_call)
       const categories = row.categories ? (Array.isArray(row.categories) ? row.categories : [row.categories]) : []
       const category = categories[0] || "General"
       
@@ -81,12 +82,12 @@ export async function GET() {
       }
     })
 
-    return NextResponse.json({ listings })
+    return NextResponse.json({ items: listings })
 
   } catch (error) {
     console.error("Error fetching marketplace listings:", error)
     return NextResponse.json(
-      { error: "Failed to fetch marketplace listings", listings: [] },
+      { error: "Failed to fetch marketplace listings", items: [] },
       { status: 500 }
     )
   }

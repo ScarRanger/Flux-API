@@ -16,8 +16,8 @@ export function ApiCard({ api, onOpen }: { api: any; onOpen: () => void }) {
           </p>
         </div>
         <div className="ml-auto text-right">
-          <div className="text-sm">Price</div>
-          <div className="text-lg font-semibold">${api.pricePerCall.toFixed(4)}</div>
+          <div className="text-sm">Price per call</div>
+          <div className="text-lg font-semibold">{api.pricePerCall.toFixed(6)} ETH</div>
         </div>
       </div>
       <div className="mt-3 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
