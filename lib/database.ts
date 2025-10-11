@@ -233,4 +233,5 @@ export class WalletDB {
   }
 }
 
+export { pool };
 export default WalletDB;

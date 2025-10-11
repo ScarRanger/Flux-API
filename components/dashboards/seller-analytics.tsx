@@ -25,11 +25,17 @@ import { cn } from "@/lib/utils"
 import { DollarSign, Package, TrendingUp, Users, Zap, ArrowUpRight, Plus, Clock } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import Link from "next/link"
+import { useAuth } from "@/lib/auth-context"
 
 const fetcher = (url: string) => fetch(url).then((r) => r.json())
 
 export default function SellerAnalytics() {
-  const { data } = useSWR("/api/dashboard/seller", fetcher, { revalidateOnFocus: false })
+  const { dbUser } = useAuth()
+  const { data } = useSWR(
+    dbUser?.id ? `/api/dashboard/seller?userId=${dbUser.id}` : null,
+    fetcher, 
+    { revalidateOnFocus: false }
+  )
   
   if (!data) {
     return (
