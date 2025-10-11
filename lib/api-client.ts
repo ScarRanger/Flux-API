@@ -8,7 +8,11 @@ export class ApiClient {
     displayName?: string;
     photoURL?: string;
     role?: 'buyer' | 'seller';
-  }): Promise<User | null> {
+  }): Promise<{
+    user: User | null;
+    isNewUser: boolean;
+    requiresRoleSelection: boolean;
+  }> {
     try {
       const response = await fetch('/api/auth/user', {
         method: 'POST',
@@ -28,11 +32,19 @@ export class ApiClient {
         throw new Error('Failed to fetch user data');
       }
 
-      const userData = await response.json();
-      return userData.user;
+      const data = await response.json();
+      return {
+        user: data.user || null,
+        isNewUser: data.isNewUser || false,
+        requiresRoleSelection: data.requiresRoleSelection || false,
+      };
     } catch (error) {
       console.error('Error fetching user data:', error);
-      return null;
+      return {
+        user: null,
+        isNewUser: false,
+        requiresRoleSelection: false,
+      };
     }
   }
 

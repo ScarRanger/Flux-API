@@ -19,6 +19,10 @@ interface AuthContextType {
   signInWithGoogle: () => Promise<void>;
   logout: () => Promise<void>;
   refreshDbUser: () => Promise<void>;
+  showRoleSelection: boolean;
+  setShowRoleSelection: (show: boolean) => void;
+  handleRoleSelection: (role: 'buyer' | 'seller') => Promise<void>;
+  pendingUserEmail?: string;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -39,28 +43,49 @@ export function AuthProvider({ children }: AuthProviderProps) {
   const [user, setUser] = useState<FirebaseUser | null>(null);
   const [dbUser, setDbUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+  const [showRoleSelection, setShowRoleSelection] = useState(false);
+  const [pendingUserEmail, setPendingUserEmail] = useState<string>();
 
   // Fetch user data from database
-  const fetchDbUser = async (firebaseUser: FirebaseUser): Promise<User | null> => {
+  const fetchDbUser = async (firebaseUser: FirebaseUser, selectedRole?: 'buyer' | 'seller'): Promise<User | null> => {
     try {
-      // Get the selected role from localStorage (set during sign in)
-      const selectedRole = localStorage.getItem('selectedUserRole') as 'buyer' | 'seller' | null;
-      
-      const userData = await ApiClient.createOrGetUser({
+      const result = await ApiClient.createOrGetUser({
         uid: firebaseUser.uid,
         email: firebaseUser.email || '',
         displayName: firebaseUser.displayName || undefined,
         photoURL: firebaseUser.photoURL || undefined,
-        role: selectedRole || undefined,
+        role: selectedRole,
       });
       
-      // Clear the selected role after use
-      localStorage.removeItem('selectedUserRole');
+      // If this is a new user and needs role selection
+      if (result.requiresRoleSelection) {
+        setPendingUserEmail(firebaseUser.email || undefined);
+        setShowRoleSelection(true);
+        return null;
+      }
       
-      return userData;
+      return result.user;
     } catch (error) {
       console.error('Error fetching user data:', error);
       return null;
+    }
+  };
+
+  // Handle role selection for new users
+  const handleRoleSelection = async (role: 'buyer' | 'seller') => {
+    if (!user) return;
+    
+    try {
+      setLoading(true);
+      const userData = await fetchDbUser(user, role);
+      setDbUser(userData);
+      setShowRoleSelection(false);
+      setPendingUserEmail(undefined);
+    } catch (error) {
+      console.error('Error setting user role:', error);
+      throw error;
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -127,6 +152,10 @@ export function AuthProvider({ children }: AuthProviderProps) {
     signInWithGoogle,
     logout,
     refreshDbUser,
+    showRoleSelection,
+    setShowRoleSelection,
+    handleRoleSelection,
+    pendingUserEmail,
   };
 
   return (
