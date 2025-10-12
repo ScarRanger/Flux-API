@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { Pool } from 'pg'
 import { ethers } from 'ethers'
 import { getEscrowWallet, deductGasFeeFromEscrow } from '@/lib/escrow-wallet'
+import { blockchainQueue } from '@/lib/blockchain-queue'
 
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
@@ -11,127 +12,144 @@ const pool = new Pool({
 /**
  * Log API usage to blockchain (async, non-blocking)
  * Uses escrow wallet funded by buyer's gas fee deposit
+ * Now uses a queue to prevent nonce collisions
  */
 async function logUsageToBlockchain(access: any, callLogId: number, purchaseId: number) {
   console.log(`\n🔗 [Blockchain Logging] Starting for call ID: ${callLogId}`)
-  try {
-    const USAGE_TRACKING_ADDRESS = process.env.NEXT_PUBLIC_USAGE_TRACKING_ADDRESS
-    
-    if (!USAGE_TRACKING_ADDRESS) {
-      console.log('⚠️  Usage tracking contract not configured, skipping blockchain logging')
-      return
-    }
-    console.log(`✓ Contract address: ${USAGE_TRACKING_ADDRESS}`)
-
-    const rpcUrl = process.env.RPC_URL
-    if (!rpcUrl) {
-      throw new Error('RPC_URL not configured')
-    }
-    console.log(`✓ RPC URL configured: ${rpcUrl.substring(0, 30)}...`)
-
-    const provider = new ethers.JsonRpcProvider(rpcUrl)
-    
-    // Use escrow wallet instead of system wallet
-    const wallet = getEscrowWallet(provider)
-    console.log(`✓ Using escrow wallet: ${wallet.address}`)
-
-    // Import ABI
-    const UsageTrackingABI = await import('@/smart_contracts/usagetracking.json')
-    console.log(`✓ ABI imported`)
-    
-    const contract = new ethers.Contract(
-      USAGE_TRACKING_ADDRESS,
-      UsageTrackingABI.default,
-      wallet
-    )
-    console.log(`✓ Contract instance created`)
-
-    // Get buyer's wallet address from database
-    const client = await pool.connect()
-    try {
-      const buyerResult = await client.query(
-        'SELECT wallet_address FROM users WHERE firebase_uid = $1',
-        [access.buyer_uid]
-      )
-      
-      if (buyerResult.rows.length === 0) {
-        throw new Error('Buyer wallet not found')
-      }
-
-      const buyerAddress = buyerResult.rows[0].wallet_address
-      console.log(`✓ Buyer address: ${buyerAddress}`)
-
-      // Log usage on blockchain: logUsage(address user, uint256 apiId, uint256 calls)
-      console.log(`📤 Sending transaction to blockchain...`)
-      console.log(`   - Buyer: ${buyerAddress}`)
-      console.log(`   - API ID: ${access.listing_id}`)
-      console.log(`   - Calls: 1`)
-      
-      const tx = await contract.logUsage(
-        buyerAddress,
-        access.listing_id,
-        1 // 1 call
-      )
-
-      console.log('📝 Transaction sent:', tx.hash)
-      console.log('⏳ Waiting for confirmation...')
-
-      // Wait for confirmation (don't block the API response)
-      const receipt = await tx.wait(1)
-      
-      console.log('✅ Transaction confirmed:', {
-        txHash: receipt.hash,
-        blockNumber: receipt.blockNumber,
-        gasUsed: receipt.gasUsed.toString(),
-        callLogId: callLogId
-      })
-
-      // Update the api_calls table with the blockchain tx hash
-      console.log(`💾 Updating database record ${callLogId} with tx: ${receipt.hash}`)
-      const updateResult = await client.query(
-        'UPDATE api_calls SET blockchain_tx_hash = $1, blockchain_block = $2 WHERE id = $3 RETURNING id, created_at, buyer_user_id',
-        [receipt.hash, receipt.blockNumber, callLogId]
-      )
-      
-      if (updateResult.rows.length > 0) {
-        const updated = updateResult.rows[0]
-        console.log(`✅ Database updated successfully!`)
-        console.log(`   - Call ID: ${updated.id}`)
-        console.log(`   - Created: ${updated.created_at}`)
-        console.log(`   - Buyer: ${updated.buyer_user_id}`)
-        console.log(`   - TX Hash: ${receipt.hash}`)
-        console.log(`   - Block: ${receipt.blockNumber}`)
+  
+  // Wrap the entire blockchain logging in a queue to prevent nonce collisions
+  return blockchainQueue.enqueue(
+    `call-${callLogId}`,
+    async () => {
+      try {
+        const USAGE_TRACKING_ADDRESS = process.env.NEXT_PUBLIC_USAGE_TRACKING_ADDRESS
         
-        // Calculate actual gas cost and deduct from escrow
-        const gasUsed = receipt.gasUsed
-        const gasPrice = receipt.gasPrice || receipt.effectiveGasPrice || BigInt(0)
-        const gasCost = gasUsed * gasPrice
-        const gasCostInEth = ethers.formatEther(gasCost)
-        
-        console.log(`💰 Gas used: ${gasUsed.toString()} units at ${ethers.formatUnits(gasPrice, 'gwei')} gwei`)
-        console.log(`💰 Total gas cost: ${gasCostInEth} ETH`)
-        
-        // Deduct from escrow
-        const deducted = await deductGasFeeFromEscrow(purchaseId, gasCostInEth, receipt.hash)
-        if (deducted) {
-          console.log(`✓ Gas fee deducted from escrow for purchase ${purchaseId}`)
-        } else {
-          console.warn(`⚠️  Failed to deduct gas fee from escrow for purchase ${purchaseId}`)
+        if (!USAGE_TRACKING_ADDRESS) {
+          console.log('⚠️  Usage tracking contract not configured, skipping blockchain logging')
+          return
         }
-      } else {
-        console.error(`⚠️  No rows updated for call ID: ${callLogId} - Record may not exist!`)
+        console.log(`✓ Contract address: ${USAGE_TRACKING_ADDRESS}`)
+
+        const rpcUrl = process.env.RPC_URL
+        if (!rpcUrl) {
+          throw new Error('RPC_URL not configured')
+        }
+        console.log(`✓ RPC URL configured: ${rpcUrl.substring(0, 30)}...`)
+
+        const provider = new ethers.JsonRpcProvider(rpcUrl)
+        
+        // Use escrow wallet instead of system wallet
+        const wallet = getEscrowWallet(provider)
+        console.log(`✓ Using escrow wallet: ${wallet.address}`)
+
+        // Import ABI
+        const UsageTrackingABI = await import('@/smart_contracts/usagetracking.json')
+        console.log(`✓ ABI imported`)
+        
+        const contract = new ethers.Contract(
+          USAGE_TRACKING_ADDRESS,
+          UsageTrackingABI.default,
+          wallet
+        )
+        console.log(`✓ Contract instance created`)
+
+        // Get buyer's wallet address from database
+        const client = await pool.connect()
+        try {
+          const buyerResult = await client.query(
+            'SELECT wallet_address FROM users WHERE firebase_uid = $1',
+            [access.buyer_uid]
+          )
+          
+          if (buyerResult.rows.length === 0) {
+            throw new Error('Buyer wallet not found')
+          }
+
+          const buyerAddress = buyerResult.rows[0].wallet_address
+          console.log(`✓ Buyer address: ${buyerAddress}`)
+
+          // Get nonce from the queue manager (prevents collisions)
+          const nonce = await blockchainQueue.getNonce(wallet, provider)
+
+          // Log usage on blockchain: logUsage(address user, uint256 apiId, uint256 calls)
+          console.log(`📤 Sending transaction to blockchain...`)
+          console.log(`   - Buyer: ${buyerAddress}`)
+          console.log(`   - API ID: ${access.listing_id}`)
+          console.log(`   - Calls: 1`)
+          console.log(`   - Nonce: ${nonce}`)
+          
+          const tx = await contract.logUsage(
+            buyerAddress,
+            access.listing_id,
+            1, // 1 call
+            { nonce } // Explicitly set nonce from queue manager
+          )
+
+          console.log('📝 Transaction sent:', tx.hash)
+          console.log('⏳ Waiting for confirmation...')
+
+          // Wait for confirmation (don't block the API response)
+          const receipt = await tx.wait(1)
+          
+          console.log('✅ Transaction confirmed:', {
+            txHash: receipt.hash,
+            blockNumber: receipt.blockNumber,
+            gasUsed: receipt.gasUsed.toString(),
+            callLogId: callLogId
+          })
+
+          // Update the api_calls table with the blockchain tx hash
+          console.log(`💾 Updating database record ${callLogId} with tx: ${receipt.hash}`)
+          const updateResult = await client.query(
+            'UPDATE api_calls SET blockchain_tx_hash = $1, blockchain_block = $2 WHERE id = $3 RETURNING id, created_at, buyer_user_id',
+            [receipt.hash, receipt.blockNumber, callLogId]
+          )
+          
+          if (updateResult.rows.length > 0) {
+            const updated = updateResult.rows[0]
+            console.log(`✅ Database updated successfully!`)
+            console.log(`   - Call ID: ${updated.id}`)
+            console.log(`   - Created: ${updated.created_at}`)
+            console.log(`   - Buyer: ${updated.buyer_user_id}`)
+            console.log(`   - TX Hash: ${receipt.hash}`)
+            console.log(`   - Block: ${receipt.blockNumber}`)
+            
+            // Calculate actual gas cost and deduct from escrow
+            const gasUsed = receipt.gasUsed
+            const gasPrice = receipt.gasPrice || receipt.effectiveGasPrice || BigInt(0)
+            const gasCost = gasUsed * gasPrice
+            const gasCostInEth = ethers.formatEther(gasCost)
+            
+            console.log(`💰 Gas used: ${gasUsed.toString()} units at ${ethers.formatUnits(gasPrice, 'gwei')} gwei`)
+            console.log(`💰 Total gas cost: ${gasCostInEth} ETH`)
+            
+            // Deduct from escrow
+            const deducted = await deductGasFeeFromEscrow(purchaseId, gasCostInEth, receipt.hash)
+            if (deducted) {
+              console.log(`✓ Gas fee deducted from escrow for purchase ${purchaseId}`)
+            } else {
+              console.warn(`⚠️  Failed to deduct gas fee from escrow for purchase ${purchaseId}`)
+            }
+          } else {
+            console.error(`⚠️  No rows updated for call ID: ${callLogId} - Record may not exist!`)
+          }
+
+        } finally {
+          client.release()
+        }
+
+      } catch (error: any) {
+        console.error('❌ [Blockchain Logging] Error:', error.message)
+        console.error('Stack:', error.stack)
+        console.error('Full error:', error)
+        
+        // Clear nonce cache on error so next transaction fetches fresh nonce
+        blockchainQueue.clearNonceCache()
+        
+        // Don't throw - we don't want blockchain issues to fail the API call
       }
-
-    } finally {
-      client.release()
     }
-
-  } catch (error: any) {
-    console.error('❌ [Blockchain Logging] Error:', error.message)
-    console.error('Stack:', error.stack)
-    console.error('Full error:', error)
-    // Don't throw - we don't want blockchain issues to fail the API call
-  }
+  )
 }
 
 /**

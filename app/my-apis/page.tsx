@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { useAuth } from '@/lib/auth-context'
+import Link from 'next/link'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -16,7 +17,9 @@ import {
   AlertCircle,
   Code,
   ChevronDown,
-  ChevronUp
+  ChevronUp,
+  Database,
+  Link as LinkIcon
 } from 'lucide-react'
 import {
   Collapsible,
@@ -43,6 +46,19 @@ interface APIAccess {
   purchasedAt: string
   purchaseAmount: number
   transactionHash: string
+  blockchain?: {
+    totalLoggedCalls: number
+    recentLogs: Array<{
+      txHash: string
+      blockNumber: number
+      timestamp: string
+      statusCode: number
+      method: string
+      path: string
+    }>
+    explorerUrl: string | null
+    usageLogsUrl: string | null
+  }
   gatewayUrl: string
 }
 
@@ -291,6 +307,74 @@ export default function MyAPIsPage() {
                   </Alert>
                 </CollapsibleContent>
               </Collapsible>
+
+              {/* Blockchain Logging Section */}
+              {api.blockchain && api.blockchain.totalLoggedCalls > 0 && (
+                <div className="space-y-3 pt-2 border-t">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <Database className="w-4 h-4 text-blue-600" />
+                      <span className="text-sm font-medium">Blockchain Logged Calls</span>
+                      <Badge variant="secondary">{api.blockchain.totalLoggedCalls}</Badge>
+                    </div>
+                    {api.blockchain.usageLogsUrl && (
+                      <Button variant="outline" size="sm" asChild>
+                        <a 
+                          href={api.blockchain.usageLogsUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="flex items-center gap-1"
+                        >
+                          <LinkIcon className="w-3 h-3" />
+                          View Contract
+                        </a>
+                      </Button>
+                    )}
+                  </div>
+                  
+                  {api.blockchain.recentLogs && api.blockchain.recentLogs.length > 0 && (
+                    <div className="space-y-2">
+                      <div className="text-xs text-muted-foreground">
+                        Latest {api.blockchain.recentLogs.length} blockchain log{api.blockchain.recentLogs.length > 1 ? 's' : ''}:
+                      </div>
+                      <div className="space-y-1">
+                        {api.blockchain.recentLogs.map((log, idx) => (
+                          <div key={idx} className="flex items-center justify-between p-2 bg-muted/50 rounded text-xs">
+                            <div className="flex items-center gap-2">
+                              <Badge variant={log.statusCode >= 200 && log.statusCode < 300 ? 'default' : 'destructive'} className="text-[10px]">
+                                {log.statusCode}
+                              </Badge>
+                              <span className="font-medium">{log.method}</span>
+                              <span className="text-muted-foreground truncate max-w-[150px]">{log.path}</span>
+                            </div>
+                            <a
+                              href={`https://sepolia.etherscan.io/tx/${log.txHash}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="flex items-center gap-1 text-blue-600 hover:text-blue-700"
+                            >
+                              Block #{log.blockNumber}
+                              <ExternalLink className="w-3 h-3" />
+                            </a>
+                          </div>
+                        ))}
+                      </div>
+                      {api.blockchain.totalLoggedCalls > 3 && (
+                        <Button
+                          variant="link"
+                          size="sm"
+                          className="w-full text-xs"
+                          asChild
+                        >
+                          <Link href={`/my-apis/blockchain-logs?accessKey=${api.accessKey}`}>
+                            View All {api.blockchain.totalLoggedCalls} Blockchain Logs →
+                          </Link>
+                        </Button>
+                      )}
+                    </div>
+                  )}
+                </div>
+              )}
 
               {/* Transaction Link */}
               <div className="flex items-center justify-between pt-2 border-t">
