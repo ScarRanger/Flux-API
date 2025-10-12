@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { Pool } from 'pg'
 import { ethers } from 'ethers'
+import { getEscrowWallet, deductGasFeeFromEscrow } from '@/lib/escrow-wallet'
 
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
@@ -9,8 +10,9 @@ const pool = new Pool({
 
 /**
  * Log API usage to blockchain (async, non-blocking)
+ * Uses escrow wallet funded by buyer's gas fee deposit
  */
-async function logUsageToBlockchain(access: any, callLogId: number) {
+async function logUsageToBlockchain(access: any, callLogId: number, purchaseId: number) {
   console.log(`\n🔗 [Blockchain Logging] Starting for call ID: ${callLogId}`)
   try {
     const USAGE_TRACKING_ADDRESS = process.env.NEXT_PUBLIC_USAGE_TRACKING_ADDRESS
@@ -27,16 +29,11 @@ async function logUsageToBlockchain(access: any, callLogId: number) {
     }
     console.log(`✓ RPC URL configured: ${rpcUrl.substring(0, 30)}...`)
 
-    // Get a system wallet for logging (you could use the buyer's wallet too)
-    const systemPrivateKey = process.env.SYSTEM_WALLET_PRIVATE_KEY
-    if (!systemPrivateKey) {
-      throw new Error('SYSTEM_WALLET_PRIVATE_KEY not configured for blockchain logging')
-    }
-    console.log(`✓ System wallet configured`)
-
     const provider = new ethers.JsonRpcProvider(rpcUrl)
-    const wallet = new ethers.Wallet(systemPrivateKey, provider)
-    console.log(`✓ Wallet address: ${wallet.address}`)
+    
+    // Use escrow wallet instead of system wallet
+    const wallet = getEscrowWallet(provider)
+    console.log(`✓ Using escrow wallet: ${wallet.address}`)
 
     // Import ABI
     const UsageTrackingABI = await import('@/smart_contracts/usagetracking.json')
@@ -104,6 +101,23 @@ async function logUsageToBlockchain(access: any, callLogId: number) {
         console.log(`   - Buyer: ${updated.buyer_user_id}`)
         console.log(`   - TX Hash: ${receipt.hash}`)
         console.log(`   - Block: ${receipt.blockNumber}`)
+        
+        // Calculate actual gas cost and deduct from escrow
+        const gasUsed = receipt.gasUsed
+        const gasPrice = receipt.gasPrice || receipt.effectiveGasPrice || BigInt(0)
+        const gasCost = gasUsed * gasPrice
+        const gasCostInEth = ethers.formatEther(gasCost)
+        
+        console.log(`💰 Gas used: ${gasUsed.toString()} units at ${ethers.formatUnits(gasPrice, 'gwei')} gwei`)
+        console.log(`💰 Total gas cost: ${gasCostInEth} ETH`)
+        
+        // Deduct from escrow
+        const deducted = await deductGasFeeFromEscrow(purchaseId, gasCostInEth, receipt.hash)
+        if (deducted) {
+          console.log(`✓ Gas fee deducted from escrow for purchase ${purchaseId}`)
+        } else {
+          console.warn(`⚠️  Failed to deduct gas fee from escrow for purchase ${purchaseId}`)
+        }
       } else {
         console.error(`⚠️  No rows updated for call ID: ${callLogId} - Record may not exist!`)
       }
@@ -224,32 +238,38 @@ export async function POST(req: NextRequest) {
         )
       }
 
-      // 4. Decrypt seller's API key
-      if (!access.encrypted_api_key || !access.encryption_salt) {
-        return NextResponse.json(
-          { 
-            error: 'API authentication not configured',
-            details: 'The seller has not properly configured API authentication for this listing'
-          },
-          { status: 500 }
-        )
-      }
-
-      // Decrypt the API key (using base64 decoding - matching the encryption in sell-api page)
-      let sellerApiKey: string
-      try {
-        const decoded = Buffer.from(access.encrypted_api_key, 'base64').toString('utf-8')
-        const [salt, apiKey] = decoded.split(':')
-        if (salt !== access.encryption_salt) {
-          throw new Error('Salt mismatch')
+      // 4. Handle API authentication based on auth_type
+      let sellerApiKey: string | null = null
+      
+      // Only decrypt if auth is required (not 'none')
+      if (access.auth_type && access.auth_type !== 'none') {
+        if (!access.encrypted_api_key || !access.encryption_salt) {
+          return NextResponse.json(
+            { 
+              error: 'API authentication not configured',
+              details: 'The seller has not properly configured API authentication for this listing'
+            },
+            { status: 500 }
+          )
         }
-        sellerApiKey = apiKey
-      } catch (decryptError) {
-        console.error('Failed to decrypt API key:', decryptError)
-        return NextResponse.json(
-          { error: 'Failed to decrypt API credentials' },
-          { status: 500 }
-        )
+
+        // Decrypt the API key (using base64 decoding - matching the encryption in sell-api page)
+        try {
+          const decoded = Buffer.from(access.encrypted_api_key, 'base64').toString('utf-8')
+          const [salt, apiKey] = decoded.split(':')
+          if (salt !== access.encryption_salt) {
+            throw new Error('Salt mismatch')
+          }
+          sellerApiKey = apiKey
+        } catch (decryptError) {
+          console.error('Failed to decrypt API key:', decryptError)
+          return NextResponse.json(
+            { error: 'Failed to decrypt API credentials' },
+            { status: 500 }
+          )
+        }
+      } else {
+        console.log('Public API - no authentication required')
       }
 
       // 5. Build the actual API request
@@ -259,11 +279,13 @@ export async function POST(req: NextRequest) {
         ...customHeaders
       }
 
-      // Add authentication based on auth type
-      if (access.auth_type === 'header-key') {
-        requestHeaders[access.auth_param_name] = sellerApiKey
-      } else if (access.auth_type === 'oauth2') {
-        requestHeaders['Authorization'] = `Bearer ${sellerApiKey}`
+      // Add authentication based on auth type (only if auth is required)
+      if (sellerApiKey && access.auth_type) {
+        if (access.auth_type === 'header-key') {
+          requestHeaders[access.auth_param_name] = sellerApiKey
+        } else if (access.auth_type === 'oauth2') {
+          requestHeaders['Authorization'] = `Bearer ${sellerApiKey}`
+        }
       }
 
       // 6. Make the request to the actual API
@@ -377,8 +399,8 @@ export async function POST(req: NextRequest) {
         await client.query('COMMIT')
         console.log('✓ Logged API call to database (ID:', callLogId, ')')
 
-        // Log to blockchain (async, don't wait for it)
-        logUsageToBlockchain(access, callLogId).catch(err => {
+        // Log to blockchain (async, don't wait for it) - uses escrow funds
+        logUsageToBlockchain(access, callLogId, access.purchase_id).catch(err => {
           console.error('Failed to log to blockchain (non-fatal):', err)
         })
 

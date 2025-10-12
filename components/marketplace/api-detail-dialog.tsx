@@ -58,15 +58,20 @@ export function ApiDetailDialog({
   const subtotal = api ? packageSize * api.pricePerCall : 0
   const platformFees = subtotal * 0.005 // 0.5% platform fee
   
-  // Calculate gas estimate based on Sepolia testnet conditions
-  // Standard ETH transfer uses 21,000 gas units
-  // From Etherscan: Gas Price was ~0.00000001 Gwei (extremely low on testnet)
-  const gasUnits = 21000 // Standard ETH transfer
-  const gasPriceGwei = 0.00000005 // Very low gas price on Sepolia (~0.00000001 Gwei typical)
-  const gasEstimateETH = (gasUnits * gasPriceGwei) / 1e9 // Convert to ETH
-  // Example: 21,000 * 0.00000005 / 1,000,000,000 = 0.00000000000105 ETH
+  // Blockchain logging gas fee (collected upfront, used to pay for on-chain logging)
+  // Realistic Sepolia testnet: 50,000 gas × 0.05 gwei per call + 50% buffer
+  const gasPerCall = 50000
+  const gasPriceGwei = 0.05 // Very low testnet price (0.05 gwei)
+  const costPerCallInGwei = gasPerCall * gasPriceGwei
+  const costPerCallInEth = costPerCallInGwei / 1_000_000_000 // Convert gwei to ETH
+  const blockchainLoggingFee = costPerCallInEth * packageSize * 1.5 // 50% buffer
   
-  const total = subtotal + platformFees
+  // Calculate gas estimate for the purchase transaction itself (standard ETH transfer)
+  const gasUnits = 42000 // Two transactions: API payment + gas fee deposit (21k each)
+  const txGasPriceGwei = 0.05 // Same as blockchain logging gas price
+  const txGasEstimateETH = (gasUnits * txGasPriceGwei) / 1e9
+  
+  const total = subtotal + platformFees + blockchainLoggingFee
 
   async function startPurchase() {
     if (!dbUser) {
@@ -259,16 +264,20 @@ export function ApiDetailDialog({
                     <span className="font-medium">{platformFees.toFixed(8)} ETH</span>
                   </div>
                   <div className="flex items-center justify-between text-sm">
-                    <span className="text-muted-foreground">Estimated Gas (testnet)</span>
-                    <span className="font-medium">~{gasEstimateETH.toExponential(3)} ETH</span>
+                    <span className="text-muted-foreground">Blockchain Logging Gas</span>
+                    <span className="font-medium">{blockchainLoggingFee.toFixed(8)} ETH</span>
+                  </div>
+                  <div className="flex items-center justify-between text-xs text-muted-foreground">
+                    <span>Transaction Gas (testnet)</span>
+                    <span>~{txGasEstimateETH.toExponential(3)} ETH</span>
                   </div>
                   <div className="pt-2 border-t">
                     <div className="flex items-center justify-between">
-                      <span className="font-semibold">Total (excl. gas)</span>
+                      <span className="font-semibold">Total (excl. tx gas)</span>
                       <span className="text-lg font-bold">{total.toFixed(8)} ETH</span>
                     </div>
                     <p className="text-xs text-muted-foreground mt-1">
-                      Gas fees (~{gasEstimateETH.toExponential(2)} ETH) negligible on testnet
+                      TX gas (~{txGasEstimateETH.toExponential(2)} ETH) negligible on testnet
                     </p>
                   </div>
                 </div>
