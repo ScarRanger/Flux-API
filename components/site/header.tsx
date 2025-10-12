@@ -33,7 +33,7 @@ export function Header() {
       <Zap className="size-5 text-white" fill="currentColor" />
     </div>
   </div>
-  <span className="font-bold text-xl text-white">
+  <span className="font-bold text-xl text-foreground">
     FluxAPI
   </span>
 </Link>
