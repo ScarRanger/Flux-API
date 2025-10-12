@@ -47,12 +47,24 @@ export function Header() {
           </Link>
           {role === "buyer" && (
             <Link className="rounded-md px-3 py-2 text-sm hover:bg-secondary" href="/buyer">
-              My Buyer Dashboard
+            Dashboard
+            </Link>
+
+          )}
+          {role === "buyer" && (
+            <Link className="rounded-md px-3 py-2 text-sm hover:bg-secondary" href="/my-apis">
+              My APIs
+            </Link>
+
+          )}
+          {role === "seller" && (
+            <Link className="rounded-md px-3 py-2 text-sm hover:bg-secondary" href="/seller">
+              Dashboard
             </Link>
           )}
           {/* {role === "seller" && (
             <Link className="rounded-md px-3 py-2 text-sm hover:bg-secondary" href="/seller">
-              My Seller Dashboard
+              Dashboard
             </Link>
           )} */}
         </nav>
@@ -79,7 +91,6 @@ export function Header() {
 
         <div className="ml-2 flex items-center gap-2">
           <ThemeToggle />
-          <NotificationsCenter />
           {!role ? (
             <>
               <Button asChild className="hidden md:inline-flex">
@@ -96,9 +107,7 @@ export function Header() {
               </Button>
             </>
           )}
-          <Button asChild className="hidden md:inline-flex">
-            <Link href="/marketplace">Marketplace</Link>
-          </Button>
+        
         </div>
       </div>
 
