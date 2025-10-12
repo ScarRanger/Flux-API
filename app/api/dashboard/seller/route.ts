@@ -13,10 +13,11 @@ export async function GET(request: NextRequest) {
     // Fetch KPIs
     const earningsResult = await pool.query(`
       SELECT 
-        COALESCE(earnings_balance, 0) as earnings,
-        COALESCE(total_earned, 0) as total_earned
-      FROM user_balances
-      WHERE user_id = $1
+        COALESCE(ub.earnings_balance, 0) as earnings,
+        COALESCE(ub.total_earned, 0) as total_earned
+      FROM users u
+      LEFT JOIN user_balances ub ON u.id = ub.user_id
+      WHERE u.firebase_uid = $1
     `, [userId])
 
     const listingsResult = await pool.query(`
@@ -103,7 +104,7 @@ export async function GET(request: NextRequest) {
         COUNT(DISTINCT ac.listing_id) > 1 as returning
       FROM api_calls ac
       JOIN api_listings al ON ac.listing_id = al.id
-      JOIN users u ON ac.buyer_user_id = u.id
+      JOIN users u ON ac.buyer_user_id = u.firebase_uid
       WHERE al.seller_uid = $1 AND ac.is_successful = true
       GROUP BY u.id, u.display_name, u.wallet_address
       ORDER BY spend_wei DESC

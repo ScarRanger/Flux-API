@@ -27,11 +27,36 @@ const fetcher = (url: string) => fetch(url).then((r) => r.json())
 
 export default function BuyerOverview() {
   const { dbUser } = useAuth()
-  const { data } = useSWR(
-    dbUser?.id ? `/api/dashboard/buyer?userId=${dbUser.id}` : null, 
+  const { data, error } = useSWR(
+    dbUser?.firebase_uid ? `/api/dashboard/buyer?userId=${dbUser.firebase_uid}` : null, 
     fetcher, 
-    { revalidateOnFocus: false }
+    { 
+      revalidateOnFocus: false,
+      onSuccess: (data) => {
+        console.log('✅ Dashboard data loaded:', {
+          quotaPurchased: data.kpis.quotaPurchased,
+          quotaUsed: data.kpis.quotaUsed,
+          totalRequests: data.quickStats.totalRequests,
+          activeSubscriptions: data.kpis.activeSubscriptions
+        })
+      },
+      onError: (err) => {
+        console.error('❌ Dashboard data failed:', err)
+      }
+    }
   )
+  
+  // Show error state
+  if (error) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="text-center">
+          <p className="text-destructive text-lg font-semibold">Failed to load dashboard data</p>
+          <p className="text-muted-foreground text-sm mt-2">{error.message}</p>
+        </div>
+      </div>
+    )
+  }
   
   if (!data) {
     return (

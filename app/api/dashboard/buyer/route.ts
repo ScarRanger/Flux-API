@@ -10,31 +10,31 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: "User ID required" }, { status: 400 })
     }
 
-    // Fetch KPIs
+    // Fetch KPIs from real tables
     const quotasResult = await pool.query(`
       SELECT 
-        COALESCE(SUM(total_calls), 0) as quota_purchased,
-        COALESCE(SUM(total_calls - remaining_calls), 0) as quota_used
-      FROM api_quotas
-      WHERE owner_user_id = $1 AND is_active = true
+        COALESCE(SUM(total_quota), 0) as quota_purchased,
+        COALESCE(SUM(used_quota), 0) as quota_used
+      FROM api_access
+      WHERE buyer_uid = $1 AND status = 'active'
     `, [userId])
 
-    const balanceResult = await pool.query(`
+    const purchasesResult = await pool.query(`
       SELECT 
-        COALESCE(total_spent, 0) as total_spent
-      FROM user_balances
-      WHERE user_id = $1
+        COALESCE(SUM(total_amount), 0) as total_spent
+      FROM purchases
+      WHERE buyer_uid = $1
     `, [userId])
 
     const subscriptionsResult = await pool.query(`
-      SELECT COUNT(DISTINCT api_provider) as active_subscriptions
-      FROM api_quotas
-      WHERE owner_user_id = $1 AND is_active = true
+      SELECT COUNT(DISTINCT listing_id) as active_subscriptions
+      FROM api_access
+      WHERE buyer_uid = $1 AND status = 'active'
     `, [userId])
 
     // Calculate cost saved (assuming 20% savings vs on-demand)
-    const totalSpent = parseFloat(balanceResult.rows[0]?.total_spent || "0")
-    const costSavedUsd = (totalSpent / 1e18) * 0.20
+    const totalSpent = parseFloat(purchasesResult.rows[0]?.total_spent || "0")
+    const costSavedUsd = totalSpent * 0.20
 
     const kpis = {
       quotaPurchased: parseInt(quotasResult.rows[0]?.quota_purchased || "0"),
@@ -43,23 +43,25 @@ export async function GET(request: NextRequest) {
       activeSubscriptions: parseInt(subscriptionsResult.rows[0]?.active_subscriptions || "0")
     }
 
-    // Fetch Quick Stats metrics
+    // Fetch Quick Stats metrics from api_calls table
     const quickStatsResult = await pool.query(`
       SELECT 
         COUNT(*) as total_requests,
         AVG(CASE WHEN is_successful = true THEN 1.0 ELSE 0.0 END) as success_rate,
-        SUM(total_cost) as total_cost_wei
+        AVG(latency_ms) as avg_latency_ms,
+        SUM(total_cost) as total_cost_eth
       FROM api_calls
       WHERE buyer_user_id = $1
     `, [userId])
 
     const totalRequests = parseInt(quickStatsResult.rows[0]?.total_requests || "0")
     const successRate = parseFloat(quickStatsResult.rows[0]?.success_rate || "0.95")
-    const totalCostWei = parseFloat(quickStatsResult.rows[0]?.total_cost_wei || "0")
-    const avgCostPerCall = totalRequests > 0 ? totalCostWei / totalRequests / 1e18 : 0
+    const avgLatencyMs = Math.round(parseFloat(quickStatsResult.rows[0]?.avg_latency_ms || "150"))
+    const totalCostEth = parseFloat(quickStatsResult.rows[0]?.total_cost_eth || "0")
+    const avgCostPerCall = totalRequests > 0 ? totalCostEth / totalRequests : 0
 
     const quickStats = {
-      avgResponseTimeMs: 150, // Static for now - can add latency tracking to api_calls table
+      avgResponseTimeMs: avgLatencyMs,
       successRate: successRate,
       totalRequests: totalRequests,
       costPerCall: avgCostPerCall
@@ -104,30 +106,32 @@ export async function GET(request: NextRequest) {
       }
     })
 
-    // Fetch cost breakdown by provider
+    // Fetch cost breakdown by provider from purchases
     const costBreakdownResult = await pool.query(`
       SELECT 
-        api_provider as label,
-        SUM(price_per_call * (total_calls - remaining_calls)) as value
-      FROM api_quotas
-      WHERE owner_user_id = $1 AND is_active = true
-      GROUP BY api_provider
+        al.api_name as label,
+        SUM(p.total_amount) as value
+      FROM purchases p
+      JOIN api_listings al ON p.listing_id = al.id
+      WHERE p.buyer_uid = $1
+      GROUP BY al.api_name
       ORDER BY value DESC
       LIMIT 4
     `, [userId])
 
     const costBreakdown = costBreakdownResult.rows.map((row: any) => ({
       label: row.label,
-      value: parseFloat((parseFloat(row.value || "0") / 1e18).toFixed(2))
+      value: parseFloat((parseFloat(row.value || "0")).toFixed(2))
     }))
 
-    // Fetch usage by API
+    // Fetch usage by API with actual latency
     const usageByApiResult = await pool.query(`
       SELECT 
         al.api_name as api,
         COUNT(ac.id) as calls,
         AVG(CASE WHEN ac.is_successful = true THEN 1.0 ELSE 0.0 END) as success,
-        SUM(ac.total_cost) as cost_wei
+        AVG(ac.latency_ms) as avg_latency_ms,
+        SUM(ac.total_cost) as cost_eth
       FROM api_calls ac
       JOIN api_listings al ON ac.listing_id = al.id
       WHERE ac.buyer_user_id = $1
@@ -140,18 +144,21 @@ export async function GET(request: NextRequest) {
       api: row.api,
       calls: parseInt(row.calls || "0"),
       success: parseFloat(row.success || "0.95"),
-      avgLatencyMs: 150, // Static for now, can add latency tracking
-      costUsd: parseFloat((parseFloat(row.cost_wei || "0") / 1e18).toFixed(2))
+      avgLatencyMs: Math.round(parseFloat(row.avg_latency_ms || "150")),
+      costUsd: parseFloat((parseFloat(row.cost_eth || "0")).toFixed(4))
     }))
 
-    // Fetch recent logs
+    // Fetch recent logs with actual request details
     const recentLogsResult = await pool.query(`
       SELECT 
         ac.id,
         al.api_name as api,
+        ac.method,
+        ac.path,
         CASE WHEN ac.is_successful = true THEN 'ok' ELSE 'error' END as status,
+        ac.latency_ms,
         ac.created_at as time,
-        ac.total_cost as cost_wei
+        ac.total_cost as cost_eth
       FROM api_calls ac
       JOIN api_listings al ON ac.listing_id = al.id
       WHERE ac.buyer_user_id = $1
@@ -162,12 +169,12 @@ export async function GET(request: NextRequest) {
     const recentLogs = recentLogsResult.rows.map((row: any) => ({
       id: row.id.toString(),
       api: row.api,
+      method: row.method,
+      path: row.path,
       status: row.status,
       time: row.time,
-      cost: parseFloat((parseFloat(row.cost_wei || "0") / 1e18).toFixed(6)),
-      latencyMs: 150,
-      method: 'GET',
-      path: '/api'
+      latencyMs: row.latency_ms,
+      cost: parseFloat((parseFloat(row.cost_eth || "0")).toFixed(6))
     }))
 
     return NextResponse.json({

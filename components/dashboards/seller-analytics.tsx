@@ -31,11 +31,38 @@ const fetcher = (url: string) => fetch(url).then((r) => r.json())
 
 export default function SellerAnalytics() {
   const { dbUser } = useAuth()
-  const { data } = useSWR(
-    dbUser?.id ? `/api/dashboard/seller?userId=${dbUser.id}` : null,
+  const { data, error } = useSWR(
+    dbUser?.firebase_uid ? `/api/dashboard/seller?userId=${dbUser.firebase_uid}` : null,
     fetcher, 
-    { revalidateOnFocus: false }
+    { 
+      revalidateOnFocus: false,
+      onSuccess: (data) => {
+        if (data?.kpis) {
+          console.log('✅ Seller dashboard data loaded:', {
+            earningsUsd: data.kpis.earningsUsd,
+            activeListings: data.kpis.activeListings,
+            callsServed: data.kpis.callsServed,
+            quotaAvailable: data.kpis.quotaAvailable
+          })
+        }
+      },
+      onError: (err) => {
+        console.error('❌ Seller dashboard data failed:', err)
+      }
+    }
   )
+  
+  // Show error state
+  if (error) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="text-center">
+          <p className="text-destructive text-lg font-semibold">Failed to load dashboard data</p>
+          <p className="text-muted-foreground text-sm mt-2">{error.message}</p>
+        </div>
+      </div>
+    )
+  }
   
   if (!data) {
     return (
