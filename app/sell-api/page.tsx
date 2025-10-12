@@ -28,7 +28,8 @@ import {
     Tag,
     Settings,
     Shield,
-    X
+    X,
+    ArrowUpRight
 } from "lucide-react"
 
 type AuthType = "header-key" | "query-param" | "oauth2"
@@ -923,7 +924,6 @@ export default function SellAPIPage() {
                                 Your API is now active and available on the marketplace.
                             </DialogDescription>
                         </DialogHeader>
-
                         <div className="space-y-4 py-4">
                             {successData && (
                                 <>
@@ -999,6 +999,7 @@ export default function SellAPIPage() {
                                 variant="outline"
                                 onClick={() => {
                                     setSubmitSuccess(false)
+                                    setSuccessData(null)
                                     // Reset form
                                     setFormData({
                                         apiName: "",
@@ -1022,9 +1023,30 @@ export default function SellAPIPage() {
                                 Register Another API
                             </Button>
                             <Button
-                                onClick={() => router.push('/seller')}
+                                onClick={() => {
+                                    setSubmitSuccess(false)
+                                    setSuccessData(null)
+                                    // Reset form before redirecting
+                                    setFormData({
+                                        apiName: "",
+                                        baseEndpoint: "",
+                                        apiDescription: "",
+                                        documentationUrl: "",
+                                        category: [],
+                                        pricingPerCall: "",
+                                        quotaToSell: "",
+                                        authType: "header-key",
+                                        authParamName: "",
+                                        apiKey: "",
+                                        apiKeyFile: null,
+                                        region: "",
+                                        metadataUri: ""
+                                    })
+                                    router.push('/seller')
+                                }}
                                 className="flex-1"
                             >
+                                <ArrowUpRight className="w-4 h-4 mr-2" />
                                 Go to Dashboard
                             </Button>
                         </DialogFooter>
