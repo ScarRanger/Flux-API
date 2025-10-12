@@ -42,21 +42,56 @@ export function EscrowManager({ userAddress, provider, signer }: EscrowManagerPr
     try {
       setLoading(true)
       
-      // Get stake info from our API which checks the database
-      const response = await fetch(`/api/escrow/stakes?address=${userAddress}`)
-      const result = await response.json()
+      // First, get the buyer's UID from their wallet address
+      const userResponse = await fetch(`/api/user/by-address?address=${userAddress}`)
+      const userData = await userResponse.json()
       
-      if (result.success && result.data) {
-        // Convert the API response to our expected format
-        setTotalStaked(BigInt(Math.floor(parseFloat(result.data.totalStaked) * 1e18))) // Convert ETH to wei
-        
-        // For detailed stakes, we'll show a summary since individual stake details
-        // are not available from the current deployed contract
-        const mockStakes: APIKeyStake[] = []
-        setStakes(mockStakes)
-      } else {
+      if (!userData.success || !userData.user) {
         setStakes([])
         setTotalStaked(BigInt(0))
+        return
+      }
+      
+      const buyerUid = userData.user.firebase_uid
+      
+      // Get summary stake info
+      const summaryResponse = await fetch(`/api/escrow/stakes?address=${userAddress}`)
+      const summaryResult = await summaryResponse.json()
+      
+      if (summaryResult.success && summaryResult.data) {
+        // Convert the API response to our expected format
+        setTotalStaked(BigInt(Math.floor(parseFloat(summaryResult.data.totalStaked) * 1e18))) // Convert ETH to wei
+      }
+      
+      // Get detailed stakes from database
+      const detailsResponse = await fetch(`/api/escrow/manage?buyerUid=${buyerUid}`)
+      const detailsResult = await detailsResponse.json()
+      
+      if (detailsResult.success && detailsResult.stakes) {
+        // Convert database stakes to the format expected by the component
+        const dbStakes: any[] = detailsResult.stakes
+          .filter((s: any) => s.status === 'active')
+          .map((s: any) => ({
+            buyer: userAddress,
+            seller: '0x0000000000000000000000000000000000000000', // Not stored in DB
+            stakeAmount: BigInt(Math.floor(parseFloat(s.stake_amount) * 1e18)), // Convert ETH to wei
+            createdAt: BigInt(Math.floor(new Date(s.created_at).getTime() / 1000)),
+            lastActivity: BigInt(Math.floor(new Date(s.updated_at).getTime() / 1000)),
+            withdrawalRequestTime: BigInt(0), // Would need separate tracking
+            isActive: s.status === 'active',
+            slashed: s.status === 'slashed',
+            slashAmount: BigInt(s.slashed_amount ? Math.floor(parseFloat(s.slashed_amount) * 1e18) : 0),
+            apiKeyHash: s.deposit_id.toString(),
+            // Additional database fields for display
+            depositId: s.deposit_id,
+            apiListingId: s.api_listing_id,
+            quotaPurchased: s.quota_purchased,
+            transactionHash: s.transaction_hash
+          }))
+        
+        setStakes(dbStakes)
+      } else {
+        setStakes([])
       }
 
     } catch (error) {
@@ -192,46 +227,6 @@ export function EscrowManager({ userAddress, provider, signer }: EscrowManagerPr
 
   return (
     <div className="space-y-6">
-      {/* Overview Card */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Wallet className="h-5 w-5" />
-            Escrow Overview
-          </CardTitle>
-          <CardDescription>
-            Your API key security stakes
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="text-center p-4 border rounded-lg">
-              <div className="flex items-center justify-center gap-2 mb-2">
-                <Shield className="h-4 w-4 text-green-600" />
-                <span className="text-sm font-medium">Total Staked</span>
-              </div>
-              <p className="text-2xl font-bold">{formatEth(totalStaked)} ETH</p>
-            </div>
-            <div className="text-center p-4 border rounded-lg">
-              <div className="flex items-center justify-center gap-2 mb-2">
-                <Clock className="h-4 w-4 text-blue-600" />
-                <span className="text-sm font-medium">Active Stakes</span>
-              </div>
-              <p className="text-2xl font-bold">
-                {stakes.filter(s => s.isActive && !s.slashed).length}
-              </p>
-            </div>
-            <div className="text-center p-4 border rounded-lg">
-              <div className="flex items-center justify-center gap-2 mb-2">
-                <AlertTriangle className="h-4 w-4 text-orange-600" />
-                <span className="text-sm font-medium">Minimum Stake</span>
-              </div>
-              <p className="text-2xl font-bold">{formatEth(STAKE_AMOUNT)} ETH</p>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
       {/* Stakes List */}
       <Card>
         <CardHeader>

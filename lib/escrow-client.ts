@@ -4,7 +4,7 @@ import escrowABI from '@/smart_contracts/paymentescrow.json'
 // Contract address - will need to be deployed to Sepolia
 export const ESCROW_CONTRACT_ADDRESS = process.env.NEXT_PUBLIC_PAYMENT_ESCROW_CONTRACT || ''
 
-// Minimum stake amount (0.1 ETH)
+// Minimum stake amount (0.1 ETH) - must match contract STAKE_AMOUNT
 export const STAKE_AMOUNT = ethers.parseEther('0.1')
 
 // Withdrawal lock period (7 days)

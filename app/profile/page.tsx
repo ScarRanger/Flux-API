@@ -158,7 +158,7 @@ export default function ProfilePage() {
         </Card>
 
         {/* Escrow Stakes Section */}
-        <Card className="mb-6">
+        {/* <Card className="mb-6">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Shield className="h-5 w-5" />
@@ -174,7 +174,7 @@ export default function ProfilePage() {
               provider={provider}
             />
           </CardContent>
-        </Card>
+        </Card> */}
 
         {/* Detailed Escrow Management */}
         <div id="escrow-manager" className="mb-6">

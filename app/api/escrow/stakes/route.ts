@@ -39,7 +39,8 @@ export async function GET(request: NextRequest) {
       SELECT 
         COUNT(*) as total_stakes,
         SUM(CASE WHEN status = 'active' THEN 1 ELSE 0 END) as active_stakes,
-        SUM(CASE WHEN status = 'active' THEN stake_amount ELSE 0 END) as total_staked_eth
+        SUM(CASE WHEN status = 'active' THEN stake_amount ELSE 0 END) as total_staked_eth,
+        MAX(CASE WHEN status = 'active' THEN stake_amount ELSE NULL END) as current_stake_amount
       FROM escrow_stakes 
       WHERE buyer_uid = $1
     `
@@ -53,7 +54,7 @@ export async function GET(request: NextRequest) {
         totalStaked: (parseFloat(data.total_staked_eth) || 0).toString(),
         activeStakes: parseInt(data.active_stakes) || 0,
         totalPurchases: parseInt(data.total_stakes) || 0,
-        stakeAmount: '0.1' // ETH per stake
+        stakeAmount: (parseFloat(data.current_stake_amount) || 0.1).toString() // Actual stake amount from DB
       }
     })
   } catch (error) {
