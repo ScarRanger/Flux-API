@@ -72,12 +72,12 @@ export function Header() {
         <form
           onSubmit={(e) => e.preventDefault()}
           role="search"
-          className="ml-auto hidden items-center gap-2 md:flex"
+          className="ml-auto hidden items-center gap-2 md:flex text-white"
           aria-label="Search APIs"
+          style={{ color: 'white', opacity: 0, pointerEvents: 'none' }}
         >
           <div className="relative">
             <Input
-              placeholder="Search APIs ( / )"
               value={q}
               onChange={(e) => setQ(e.target.value)}
               className="w-[340px]"
@@ -85,7 +85,7 @@ export function Header() {
             />
           </div>
           <Button type="button" variant="secondary">
-            Search
+            
           </Button>
         </form>
 

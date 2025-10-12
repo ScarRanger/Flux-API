@@ -17,6 +17,11 @@ export default function MarketplacePage() {
   const [location, setLocation] = useState("all")
   const [selectedApi, setSelectedApi] = useState<any>(null)
 
+  // Fetch available filters
+  const { data: filtersData } = useSWR('/api/marketplace/filters', fetcher, {
+    revalidateOnFocus: false
+  })
+
   // Build query string
   const queryParams = new URLSearchParams()
   if (search) queryParams.set('search', search)
@@ -30,6 +35,8 @@ export default function MarketplacePage() {
   )
 
   const apis = data?.items || []
+  const categories = filtersData?.categories || ["All"]
+  const regions = filtersData?.regions || ["All"]
 
   return (
     <section className="container mx-auto px-4 md:px-6 lg:px-8 py-16 max-w-[1600px]">
@@ -57,11 +64,11 @@ export default function MarketplacePage() {
             <SelectValue placeholder="Category" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">All Categories</SelectItem>
-            <SelectItem value="AI/ML">AI/ML</SelectItem>
-            <SelectItem value="Data">Data</SelectItem>
-            <SelectItem value="Payment">Payment</SelectItem>
-            <SelectItem value="Communication">Communication</SelectItem>
+            {categories.map((cat: string) => (
+              <SelectItem key={cat} value={cat.toLowerCase()}>
+                {cat}
+              </SelectItem>
+            ))}
           </SelectContent>
         </Select>
 
@@ -70,10 +77,11 @@ export default function MarketplacePage() {
             <SelectValue placeholder="Location" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">All Locations</SelectItem>
-            <SelectItem value="US">United States</SelectItem>
-            <SelectItem value="EU">Europe</SelectItem>
-            <SelectItem value="ASIA">Asia</SelectItem>
+            {regions.map((region: string) => (
+              <SelectItem key={region} value={region.toLowerCase()}>
+                {region}
+              </SelectItem>
+            ))}
           </SelectContent>
         </Select>
 
