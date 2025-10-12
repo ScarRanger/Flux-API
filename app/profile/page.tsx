@@ -9,7 +9,16 @@ import { Separator } from "@/components/ui/separator"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { useAuth, useWallet } from "@/lib/auth-context"
 import { fetchWalletBalanceFromAPI, formatBalance, formatBalanceNumber, isLowBalance } from "@/lib/wallet-client"
-import { Wallet, User, LogOut, ArrowLeft, RefreshCw, AlertTriangle, ExternalLink } from "lucide-react"
+import { EscrowSummary } from "@/components/shared/escrow-summary"
+import { EscrowManager } from "@/components/shared/escrow-manager"
+import { Wallet, User, LogOut, ArrowLeft, RefreshCw, AlertTriangle, ExternalLink, Shield } from "lucide-react"
+
+// Extend window type for ethereum
+declare global {
+  interface Window {
+    ethereum?: any
+  }
+}
 
 export default function ProfilePage() {
   const { user, dbUser, logout, showRoleSelection } = useAuth()
@@ -20,8 +29,17 @@ export default function ProfilePage() {
   const [isLoading, setIsLoading] = useState(true)
   const [balanceError, setBalanceError] = useState<string | null>(null)
   const [isRefreshing, setIsRefreshing] = useState(false)
+  const [provider, setProvider] = useState<any>(null)
 
   useEffect(() => {
+    // Initialize provider for escrow interactions
+    if (typeof window !== 'undefined' && window.ethereum) {
+      import('ethers').then(({ ethers }) => {
+        const browserProvider = new ethers.BrowserProvider(window.ethereum)
+        setProvider(browserProvider)
+      })
+    }
+
     // Don't redirect if role selection is in progress
     if (showRoleSelection) {
       return
@@ -138,6 +156,33 @@ export default function ProfilePage() {
             </div>
           </CardHeader>
         </Card>
+
+        {/* Escrow Stakes Section */}
+        <Card className="mb-6">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Shield className="h-5 w-5" />
+              API Security Stakes
+            </CardTitle>
+            <CardDescription>
+              Your 0.1 ETH security stakes for purchased API keys
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <EscrowSummary 
+              userAddress={walletAddress || undefined}
+              provider={provider}
+            />
+          </CardContent>
+        </Card>
+
+        {/* Detailed Escrow Management */}
+        <div id="escrow-manager" className="mb-6">
+          <EscrowManager 
+            userAddress={walletAddress || undefined}
+            provider={provider}
+          />
+        </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {/* Wallet Information */}
