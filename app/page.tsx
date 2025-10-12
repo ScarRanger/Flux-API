@@ -2,7 +2,6 @@ import { Hero } from "@/components/landing/hero"
 import { ValueProps } from "@/components/landing/value-props"
 import { HowItWorks } from "@/components/landing/how-it-works"
 import { LiveStats } from "@/components/landing/live-stats"
-import { FeaturedAPIs } from "@/components/landing/featured-apis"
 
 export default function Page() {
   return (
