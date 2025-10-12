@@ -10,6 +10,7 @@ import { Suspense } from "react"
 import { ThemeProvider } from "@/components/theme-provider"
 import { AuthProvider } from "@/lib/auth-context"
 import { RoleSelectionManager } from "@/components/auth/role-selection-manager"
+import { Toaster } from "@/components/ui/sonner"
 
 export const metadata: Metadata = {
   title: "FluxAPI - Decentralized API Marketplace",
@@ -31,6 +32,7 @@ export default function RootLayout({
               <Header />
               <main className="min-h-dvh pb-16 md:pb-0">{children}</main>
               <Footer />
+              <Toaster />
               <Analytics />
             </Suspense>
           </AuthProvider>

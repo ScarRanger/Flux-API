@@ -9,6 +9,8 @@ import { Input } from "@/components/ui/input"
 import { Progress } from "@/components/ui/progress"
 import { Badge } from "@/components/ui/badge"
 import { Alert, AlertDescription } from "@/components/ui/alert"
+import { ExternalLink, Copy, CheckCircle } from "lucide-react"
+import { toast } from "sonner"
 
 export function ApiDetailDialog({
   open,
@@ -25,12 +27,14 @@ export function ApiDetailDialog({
   const [confirming, setConfirming] = useState(0)
   const [error, setError] = useState<string>("")
   const [walletBalance, setWalletBalance] = useState<number | null>(null)
+  const [purchaseResult, setPurchaseResult] = useState<any>(null)
 
   useEffect(() => {
     if (!open) {
       setStatus("idle")
       setConfirming(0)
       setError("")
+      setPurchaseResult(null)
     }
   }, [open])
 
@@ -73,7 +77,15 @@ export function ApiDetailDialog({
   
   const total = subtotal + platformFees + blockchainLoggingFee
 
-  async function startPurchase() {
+  async function startPurchase(e?: React.MouseEvent) {
+    // Prevent any default behavior that might cause page refresh
+    if (e) {
+      e.preventDefault()
+      e.stopPropagation()
+    }
+    
+    console.log('Purchase started!')
+    
     if (!dbUser) {
       setError("Please log in to make a purchase")
       return
@@ -106,20 +118,45 @@ export function ApiDetailDialog({
       })
 
       const data = await response.json()
+      console.log('Purchase API response:', data)
 
       if (!response.ok || !data.success) {
         throw new Error(data.error || 'Purchase failed')
       }
 
+      // Store the purchase result for displaying transaction details
+      setPurchaseResult(data.purchase)
+      console.log('Purchase result stored:', data.purchase)
+
       // Simulate blockchain confirmation
       setStatus("confirming")
       let i = 0
+      const purchaseData = data.purchase // Store in local variable for interval access
       const t = setInterval(() => {
         i += 1
         setConfirming(i)
         if (i >= 12) {
           clearInterval(t)
           setStatus("success")
+          console.log('About to show toast for transaction:', purchaseData?.transactionHash)
+          
+          // Show toast notification with transaction hash
+          if (purchaseData?.transactionHash) {
+            console.log('Showing toast notification')
+            // Add a small delay to ensure the toast system is ready
+            setTimeout(() => {
+              toast.success("API Purchase Successful!", {
+                description: `Transaction: ${purchaseData.transactionHash.slice(0, 10)}...${purchaseData.transactionHash.slice(-8)}`,
+                action: {
+                  label: "View on Etherscan",
+                  onClick: () => window.open(`https://sepolia.etherscan.io/tx/${purchaseData.transactionHash}`, '_blank')
+                },
+                duration: 10000
+              })
+            }, 100)
+          } else {
+            console.log('No transaction hash available for toast')
+          }
         }
       }, 300)
 
@@ -295,14 +332,33 @@ export function ApiDetailDialog({
                 )}
 
                 {status === "idle" && (
-                  <Button 
-                    onClick={startPurchase} 
-                    aria-label="Start purchase" 
-                    className="w-full"
-                    disabled={!dbUser}
-                  >
-                    {dbUser ? 'Purchase Now' : 'Please log in'}
-                  </Button>
+                  <>
+                    {/* Temporary test button for toast functionality */}
+                    <Button 
+                      type="button"
+                      onClick={() => {
+                        console.log('Test toast button clicked')
+                        toast.success("Test Toast!", {
+                          description: "This is a test to verify toast functionality",
+                          duration: 5000
+                        })
+                      }}
+                      variant="outline"
+                      className="w-full mb-2"
+                    >
+                      Test Toast
+                    </Button>
+                    
+                    <Button 
+                      type="button"
+                      onClick={startPurchase} 
+                      aria-label="Start purchase" 
+                      className="w-full"
+                      disabled={!dbUser}
+                    >
+                      {dbUser ? 'Purchase Now' : 'Please log in'}
+                    </Button>
+                  </>
                 )}
                 {status === "checking" && (
                   <div className="space-y-3">
@@ -323,14 +379,62 @@ export function ApiDetailDialog({
                   </div>
                 )}
                 {status === "success" && (
-                  <div className="space-y-3">
-                    <div className="rounded-lg bg-green-500/10 border border-green-500/20 p-4 text-center">
-                      <p className="text-sm font-semibold text-green-600 dark:text-green-400">
-                        ✓ Purchase Successful!
-                      </p>
-                      <p className="text-xs text-muted-foreground mt-1">
+                  <div className="space-y-4">
+                    <div className="rounded-lg bg-green-500/10 border border-green-500/20 p-4">
+                      <div className="flex items-center gap-2 text-green-600 dark:text-green-400 mb-3">
+                        <CheckCircle className="h-5 w-5" />
+                        <p className="font-semibold">Purchase Successful!</p>
+                      </div>
+                      <p className="text-xs text-muted-foreground mb-4">
                         Your API quota of {packageSize.toLocaleString()} calls has been added to your account
                       </p>
+                      
+                      {purchaseResult?.transactionHash && (
+                        <div className="space-y-3">
+                          <div className="rounded-md bg-muted/50 p-3">
+                            <h4 className="text-sm font-medium mb-2">Transaction Details</h4>
+                            <div className="space-y-2">
+                              <div className="flex items-center justify-between">
+                                <span className="text-xs text-muted-foreground">Transaction Hash:</span>
+                                <div className="flex items-center gap-2">
+                                  <code className="text-xs bg-background px-2 py-1 rounded border font-mono">
+                                    {purchaseResult.transactionHash.substring(0, 8)}...{purchaseResult.transactionHash.substring(purchaseResult.transactionHash.length - 8)}
+                                  </code>
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    className="h-6 w-6 p-0"
+                                    onClick={() => navigator.clipboard.writeText(purchaseResult.transactionHash)}
+                                    title="Copy transaction hash"
+                                  >
+                                    <Copy className="h-3 w-3" />
+                                  </Button>
+                                </div>
+                              </div>
+                              <div className="flex items-center justify-between">
+                                <span className="text-xs text-muted-foreground">Amount Paid:</span>
+                                <span className="text-xs font-medium">{purchaseResult.totalAmount.toFixed(8)} ETH</span>
+                              </div>
+                              <div className="flex items-center justify-between">
+                                <span className="text-xs text-muted-foreground">To Seller:</span>
+                                <code className="text-xs bg-background px-2 py-1 rounded border font-mono">
+                                  {purchaseResult.sellerWallet?.substring(0, 8)}...{purchaseResult.sellerWallet?.substring(purchaseResult.sellerWallet.length - 8)}
+                                </code>
+                              </div>
+                            </div>
+                          </div>
+                          
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="w-full"
+                            onClick={() => window.open(`https://sepolia.etherscan.io/tx/${purchaseResult.transactionHash}`, '_blank')}
+                          >
+                            <ExternalLink className="h-4 w-4 mr-2" />
+                            View on Etherscan
+                          </Button>
+                        </div>
+                      )}
                     </div>
                     <Button onClick={() => onOpenChange(false)} aria-label="Close" className="w-full">
                       Close
