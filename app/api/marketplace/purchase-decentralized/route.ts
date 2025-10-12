@@ -11,7 +11,7 @@ import { selectKeeperNode } from "@/lib/keeper-selection"
 
 /**
  * DECENTRALIZED PURCHASE FLOW
- * POST /api/marketplace/purchase
+ * POST /api/marketplace/purchase-decentralized
  * 
  * Routes purchase processing through keeper nodes for:
  * - Access key generation
@@ -115,38 +115,30 @@ export async function POST(req: NextRequest) {
       console.log(`   💳 Processing blockchain payment...`)
       let transactionHash = null
       let gasFeeTransactionHash = null
+
       try {
-        // Get RPC provider
         const rpcUrl = process.env.RPC_URL
         if (!rpcUrl) {
           throw new Error('RPC_URL not configured')
         }
 
         const provider = new ethers.JsonRpcProvider(rpcUrl)
-        
-        // Decrypt buyer's private key using the proper decryption function
         const privateKey = decryptPrivateKey(
           buyer.encrypted_private_key,
           buyer.encryption_salt
         )
-
-        // Create wallet instance
         const wallet = new ethers.Wallet(privateKey, provider)
 
-        // Check wallet balance (needs to cover API cost + gas fee + platform fee)
+        // Check wallet balance
         const balance = await provider.getBalance(wallet.address)
-        
-        // Calculate amounts for each transaction
         const apiPaymentAmount = ethers.parseEther(apiCost.toFixed(18))
         const platformFeeAmount = ethers.parseEther(platformFee.toFixed(18))
         const gasFeeDepositAmount = ethers.parseEther(gasFeeAmount)
-        
-        // Total required = all payments combined
         const totalRequired = apiPaymentAmount + platformFeeAmount + gasFeeDepositAmount
 
         if (balance < totalRequired) {
           throw new Error(
-            `Insufficient wallet balance. Required: ${ethers.formatEther(totalRequired)} ETH, Available: ${ethers.formatEther(balance)} ETH`
+            `Insufficient wallet balance. Required: ${ethers.formatEther(totalRequired)} ETH`
           )
         }
 
@@ -172,52 +164,6 @@ export async function POST(req: NextRequest) {
         gasFeeTransactionHash = gasReceipt?.hash || gasTx.hash
         console.log(`   ✅ Gas fee deposited: ${gasFeeTransactionHash}`)
 
-        // Log API payment transaction
-        try {
-          // Get user's database id from firebase_uid for the transactions table
-          const userResult = await client.query(
-            'SELECT id FROM users WHERE firebase_uid = $1',
-            [buyerId]
-          )
-          
-          const userId = userResult.rows[0]?.id
-
-          if (userId) {
-            await client.query(`
-              INSERT INTO transactions (
-                user_id,
-                transaction_hash,
-                transaction_type,
-                contract_address,
-                function_name,
-                gas_used,
-                gas_price,
-                transaction_fee,
-                block_number,
-                status,
-                created_at,
-                confirmed_at
-              ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, NOW(), NOW())
-            `, [
-              userId,
-              transactionHash,
-              'purchase',
-              listing.seller_wallet, // destination address
-              'transfer', // ETH transfer
-              apiReceipt?.gasUsed ? apiReceipt.gasUsed.toString() : '21000',
-              apiReceipt?.gasPrice ? apiReceipt.gasPrice.toString() : apiTx.gasPrice?.toString() || '0',
-              apiReceipt?.fee ? apiReceipt.fee.toString() : '0',
-              apiReceipt?.blockNumber ? apiReceipt.blockNumber.toString() : '0',
-              'confirmed'
-            ])
-          } else {
-            console.warn('Could not find user_id for firebase_uid:', buyerId)
-          }
-        } catch (txLogError) {
-          // Don't fail the purchase if transaction logging fails
-          console.error('Failed to log transaction:', txLogError)
-        }
-
       } catch (blockchainError: any) {
         console.error('   ❌ Blockchain transaction failed:', blockchainError)
         throw new Error(`Payment failed: ${blockchainError.message}`)
@@ -229,6 +175,7 @@ export async function POST(req: NextRequest) {
 
       if (!keeper) {
         console.error(`   ❌ No keeper nodes available!`)
+        // Fallback to centralized processing
         throw new Error('Keeper network unavailable. Please try again.')
       }
 
@@ -238,44 +185,30 @@ export async function POST(req: NextRequest) {
       // 9. ROUTE TO KEEPER NODE FOR PROCESSING
       console.log(`   📡 Routing purchase to keeper node...`)
 
-      let keeperData
-      try {
-        const keeperResponse = await fetch(
-          `${keeper.endpointUrl}/purchase`,
-          {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-              buyerId,
-              listingId,
-              packageSize,
-              paymentTxHash: transactionHash,
-              sellerWallet: listing.seller_wallet,
-              totalAmount: apiCost
-            }),
-            signal: AbortSignal.timeout(30000) // 30 second timeout
-          }
-        )
-
-        if (!keeperResponse.ok) {
-          const contentType = keeperResponse.headers.get('content-type')
-          if (contentType && contentType.includes('application/json')) {
-            const errorData = await keeperResponse.json()
-            throw new Error(`Keeper processing failed: ${errorData.error || keeperResponse.statusText}`)
-          } else {
-            const errorText = await keeperResponse.text()
-            console.error('   ❌ Keeper returned non-JSON response:', errorText.substring(0, 200))
-            throw new Error(`Keeper processing failed: ${keeperResponse.statusText}`)
-          }
+      const keeperResponse = await fetch(
+        `${keeper.endpointUrl}/purchase`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            buyerId,
+            listingId,
+            packageSize,
+            paymentTxHash: transactionHash,
+            sellerWallet: listing.seller_wallet,
+            totalAmount: apiCost
+          })
         }
+      )
 
-        keeperData = await keeperResponse.json()
-      } catch (fetchError: any) {
-        console.error('   ❌ Failed to communicate with keeper:', fetchError.message)
-        throw new Error(`Keeper communication failed: ${fetchError.message}. Is the keeper node running at ${keeper.endpointUrl}?`)
+      if (!keeperResponse.ok) {
+        const errorData = await keeperResponse.json()
+        throw new Error(`Keeper processing failed: ${errorData.error || keeperResponse.statusText}`)
       }
+
+      const keeperData = await keeperResponse.json()
       console.log(`   ✅ Keeper processed purchase successfully!`)
       console.log(`   Access Key: ${keeperData.access.accessKey.substring(0, 25)}...`)
 

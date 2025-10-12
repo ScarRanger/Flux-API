@@ -32,3 +32,4 @@ smart_contracts/artifacts
 fluxapi-4d5bc-988f3d457f70.json
 smart_contracts/.deps
 
+keeper-node/node_modules
