@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { Pool } from 'pg';
+import { createMarketplaceClient } from '@/lib/marketplace-registry-client';
 
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
@@ -83,13 +84,63 @@ export async function POST(request: NextRequest) {
     
     console.log('API registered in database:', apiListing);
 
+    // Register on blockchain (if contract address is configured)
+    let blockchainListingId: bigint | null = null;
+    let blockchainTxHash: string | null = null;
+
+    if (process.env.API_MARKETPLACE_REGISTRY_ADDRESS) {
+      try {
+        console.log('Registering API on blockchain...');
+        
+        const marketplaceClient = createMarketplaceClient(true);
+        
+        const blockchainResult = await marketplaceClient.listAPI({
+          apiName,
+          baseEndpoint: '', // Keep endpoint private for security
+          categories: Array.isArray(categories) ? categories : [],
+          pricePerCallETH: parseFloat(pricingPerCall), // Price is already in ETH
+          quotaAvailable: parseInt(quotaToSell),
+          metadataUri: metadataUri || ''
+        });
+
+        blockchainListingId = blockchainResult.listingId;
+        blockchainTxHash = blockchainResult.txHash;
+
+        console.log('✅ API registered on blockchain:', {
+          blockchainListingId: blockchainListingId.toString(),
+          txHash: blockchainTxHash
+        });
+
+        // Update database with blockchain information
+        await pool.query(
+          `UPDATE api_listings 
+           SET blockchain_listing_id = $1, 
+               blockchain_tx_hash = $2 
+           WHERE id = $3`,
+          [blockchainListingId.toString(), blockchainTxHash, apiListing.id]
+        );
+
+      } catch (blockchainError) {
+        console.error('⚠️  Blockchain registration failed (continuing with database-only):', blockchainError);
+        // Don't fail the entire registration if blockchain fails
+        // The API is still registered in the database
+      }
+    } else {
+      console.log('ℹ️  Blockchain registration skipped (no contract address configured)');
+    }
+
     return NextResponse.json({
       success: true,
       data: {
         id: apiListing.id,
         apiName: apiListing.api_name,
         createdAt: apiListing.created_at,
-        status: 'active'
+        status: 'active',
+        blockchain: blockchainListingId ? {
+          listingId: blockchainListingId.toString(),
+          txHash: blockchainTxHash,
+          explorerUrl: `https://sepolia.etherscan.io/tx/${blockchainTxHash}`
+        } : null
       }
     });
 

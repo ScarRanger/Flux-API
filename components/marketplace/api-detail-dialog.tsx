@@ -179,7 +179,7 @@ export function ApiDetailDialog({
                   <div className="space-y-2">
                     <div className="flex justify-between items-center">
                       <span className="text-sm text-muted-foreground">Price per call:</span>
-                      <span className="text-sm font-semibold">${api.pricePerCall.toFixed(6)}</span>
+                      <span className="text-sm font-semibold">{api.pricePerCall.toFixed(6)} ETH</span>
                     </div>
                     <div className="flex justify-between items-center">
                       <span className="text-sm text-muted-foreground">Volume discount:</span>

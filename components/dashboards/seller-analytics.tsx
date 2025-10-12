@@ -105,7 +105,7 @@ export default function SellerAnalytics() {
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
           <MetricCard
             title="Monthly Revenue"
-            value={`$${data.kpis.earningsUsd.toFixed(2)}`}
+            value={`${data.kpis.earningsUsd.toFixed(6)} ETH`}
             change="+18.2%"
             icon={DollarSign}
             gradient="from-amber-500 via-orange-500 to-amber-600"
@@ -125,8 +125,8 @@ export default function SellerAnalytics() {
             gradient="from-violet-500 via-purple-500 to-violet-600"
           />
           <MetricCard
-            title="Avg Price"
-            value={`$${data.kpis.avgPricePerCallUsd.toFixed(4)}`}
+            title="Avg Price/Call"
+            value={`${data.kpis.avgPricePerCallUsd.toFixed(8)} ETH`}
             change="+5.1%"
             icon={Zap}
             gradient="from-emerald-500 via-teal-500 to-emerald-600"

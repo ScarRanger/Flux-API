@@ -76,7 +76,7 @@ export function ApiFilters({
           onValueChange={([v]: number[]) => onChange({ ...value, maxPrice: v })}
           aria-label="Max price per call slider"
         />
-        <p className="text-xs text-muted-foreground">{value.maxPrice ? `$${value.maxPrice.toFixed(4)}` : "Any"}</p>
+        <p className="text-xs text-muted-foreground">{value.maxPrice ? `${value.maxPrice.toFixed(6)} ETH` : "Any"}</p>
       </div>
     </Card>
   )
