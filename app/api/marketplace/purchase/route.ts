@@ -8,23 +8,24 @@ import {
   recordGasFeeDeposit 
 } from "@/lib/escrow-wallet"
 import { selectKeeperNode } from "@/lib/keeper-selection"
+import { EscrowClient } from "@/lib/escrow-client"
 
 /**
- * DECENTRALIZED PURCHASE FLOW
+ * SECURE PURCHASE FLOW WITH STAKING
  * POST /api/marketplace/purchase
  * 
- * Routes purchase processing through keeper nodes for:
- * - Access key generation
- * - Database record creation
- * - Blockchain transaction verification
- * - Usage tracking initialization
+ * Enhanced with PaymentEscrow staking system:
+ * - Requires 0.1 ETH minimum stake for API key security
+ * - Routes purchase processing through keeper nodes
+ * - Handles upgrade logic for existing API key holders
+ * - Prevents API key theft through collateral staking
  */
 export async function POST(req: NextRequest) {
-  console.log('\n🛒 [DECENTRALIZED PURCHASE] New purchase request')
+  console.log('\n🛒 [SECURE PURCHASE WITH STAKING] New purchase request')
   
   try {
     const body = await req.json()
-    const { buyerId, listingId, packageSize, totalAmount } = body
+    const { buyerId, listingId, packageSize, totalAmount, isUpgrade = false } = body
 
     // Validate input
     if (!buyerId || !listingId || !packageSize || !totalAmount) {
@@ -38,6 +39,7 @@ export async function POST(req: NextRequest) {
     console.log(`   Listing: ${listingId}`)
     console.log(`   Package: ${packageSize} calls`)
     console.log(`   Amount: ${totalAmount} ETH`)
+    console.log(`   Is Upgrade: ${isUpgrade}`)
 
     // Start a transaction
     const client = await pool.connect()
@@ -88,12 +90,112 @@ export async function POST(req: NextRequest) {
         throw new Error('Insufficient quota available')
       }
 
-      // 4. Calculate gas fee for blockchain logging
+      // 4. ESCROW STAKING REQUIREMENTS
+      console.log(`   🔐 Checking escrow staking requirements...`)
+      
+      // Check if buyer already has a stake for this API
+      const existingStakeResult = await client.query(`
+        SELECT deposit_id, stake_amount, api_listing_id, is_upgraded 
+        FROM escrow_stakes 
+        WHERE buyer_uid = $1 AND api_listing_id = $2 AND status = 'active'
+      `, [buyerId, listingId])
+
+      const MIN_STAKE_ETH = "0.1"
+      const minStakeWei = ethers.parseEther(MIN_STAKE_ETH)
+      let stakeTxHash = null
+      let escrowDepositId = null
+
+      if (existingStakeResult.rows.length > 0 && !isUpgrade) {
+        // User already has stake - this is an upgrade
+        console.log(`   ↗️ User has existing stake, treating as upgrade`)
+        const existingStake = existingStakeResult.rows[0]
+        escrowDepositId = existingStake.deposit_id
+        
+        // Verify minimum stake
+        const currentStake = ethers.parseEther(existingStake.stake_amount)
+        if (currentStake < minStakeWei) {
+          throw new Error(`Existing stake ${existingStake.stake_amount} ETH is below minimum required ${MIN_STAKE_ETH} ETH`)
+        }
+      } else {
+        // New stake required or explicit upgrade
+        console.log(`   💰 Setting up new escrow stake of ${MIN_STAKE_ETH} ETH...`)
+        
+        // Initialize escrow client
+        const rpcUrl = process.env.RPC_URL
+        if (!rpcUrl) {
+          throw new Error('RPC_URL not configured')
+        }
+
+        const escrowContractAddress = process.env.NEXT_PUBLIC_PAYMENT_ESCROW_CONTRACT
+        if (!escrowContractAddress) {
+          throw new Error('PaymentEscrow contract address not configured')
+        }
+
+        const provider = new ethers.JsonRpcProvider(rpcUrl)
+        const privateKey = decryptPrivateKey(
+          buyer.encrypted_private_key,
+          buyer.encryption_salt
+        )
+        const wallet = new ethers.Wallet(privateKey, provider)
+        const escrowClient = new EscrowClient(provider, wallet)
+
+        try {
+          if (isUpgrade && existingStakeResult.rows.length > 0) {
+            // Handle upgrade for existing stake - just log the upgrade
+            console.log(`   ↗️ Processing upgrade for existing stake...`)
+            stakeTxHash = existingStakeResult.rows[0].transaction_hash // Use existing tx hash
+            escrowDepositId = existingStakeResult.rows[0].deposit_id
+            
+            // Mark as upgraded
+            await client.query(`
+              UPDATE escrow_stakes 
+              SET is_upgraded = true, upgraded_at = NOW() 
+              WHERE deposit_id = $1
+            `, [escrowDepositId])
+            
+          } else {
+            // Create new stake using the real contract now that ABIs are fixed
+            console.log(`   🔒 Creating real escrow deposit via blockchain...`)
+            const apiKeyHash = ethers.keccak256(ethers.toUtf8Bytes(`${listingId}-${buyerId}-${Date.now()}`))
+            
+            // Now use the real depositStake function from the updated contract
+            console.log(`   Calling depositStake with seller: ${listing.seller_wallet}, apiKeyHash: ${apiKeyHash}`)
+            const stakeResult = await escrowClient.depositStake(
+              listing.seller_wallet,
+              apiKeyHash,
+              listingId
+            )
+            
+            stakeTxHash = stakeResult.transactionHash
+            const apiKeyId = stakeResult.apiKeyId
+            
+            // Create stake record in database for tracking
+            const dbStakeResult = await client.query(`
+              INSERT INTO escrow_stakes (
+                buyer_uid, api_listing_id, stake_amount, quota_purchased, 
+                transaction_hash, status, created_at
+              ) VALUES ($1, $2, $3, $4, $5, 'active', NOW())
+              RETURNING deposit_id
+            `, [buyerId, listingId, MIN_STAKE_ETH, packageSize, stakeTxHash])
+            
+            escrowDepositId = dbStakeResult.rows[0].deposit_id
+          }
+          
+          console.log(`   ✅ Escrow stake confirmed: ${stakeTxHash}`)
+          console.log(`   Deposit ID: ${escrowDepositId}`)
+          
+        } catch (escrowError: any) {
+          console.error('   ❌ Escrow staking failed:', escrowError)
+          throw new Error(`Escrow staking failed: ${escrowError.message}`)
+        }
+      }
+
+      // 5. Calculate gas fee for blockchain logging
       const gasFeeAmount = calculateGasFeeForCalls(packageSize)
       const gasFeeInEth = parseFloat(gasFeeAmount)
       console.log(`   Gas fee for ${packageSize} calls: ${gasFeeAmount} ETH`)
 
-      // 5. Verify the total amount matches expected (API cost + platform fee + gas fee)
+      // 6. Verify the total amount matches expected (API cost + platform fee + gas fee)
       const apiCost = parseFloat(listing.price_per_call) * packageSize
       const platformFee = apiCost * 0.005 // 0.5% platform fee
       const expectedTotal = apiCost + platformFee + gasFeeInEth
@@ -296,7 +398,7 @@ export async function POST(req: NextRequest) {
       await client.query('COMMIT')
       console.log(`   ✅ Transaction committed`)
 
-      // 12. Return success response with keeper info
+      // 12. Return success response with keeper and escrow info
       return NextResponse.json({
         success: true,
         decentralized: true,
@@ -324,6 +426,15 @@ export async function POST(req: NextRequest) {
             example: `curl -X POST ${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/api/gateway/proxy -H "X-BNB-API-Key: ${keeperData.access.accessKey}" -H "Content-Type: application/json" -d '{"method":"GET","path":"/endpoint"}'`
           }
         },
+        escrowStake: {
+          depositId: escrowDepositId,
+          stakeAmount: MIN_STAKE_ETH,
+          transactionHash: stakeTxHash,
+          isUpgrade: isUpgrade,
+          status: "active",
+          securityNote: "Your 0.1 ETH stake secures this API key and prevents theft. Stake tracking is active in the database.",
+          contractNote: "Blockchain staking will be enabled when the PaymentEscrow contract is fully deployed and compatible."
+        },
         blockchain: keeperData.blockchain || null,
         keeper: {
           nodeId: keeper.nodeId,
@@ -340,12 +451,13 @@ export async function POST(req: NextRequest) {
     }
 
   } catch (error: any) {
-    console.error("\n❌ [DECENTRALIZED PURCHASE] Error:", error.message)
+    console.error("\n❌ [SECURE PURCHASE WITH STAKING] Error:", error.message)
     return NextResponse.json(
       { 
         success: false,
-        error: error.message || "Failed to process purchase",
-        decentralized: true
+        error: error.message || "Failed to process secure purchase with staking",
+        decentralized: true,
+        staking: true
       },
       { status: 500 }
     )
