@@ -1,0 +1,353 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BNB Chatbot - Test</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #fef3c7 0%, #fed7aa 100%);
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .header {
+            background: linear-gradient(90deg, #fbbf24 0%, #fb923c 100%);
+            color: white;
+            padding: 20px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+
+        .header-content {
+            max-width: 900px;
+            margin: 0 auto;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .header h1 {
+            font-size: 24px;
+            font-weight: 600;
+        }
+
+        .chat-container {
+            flex: 1;
+            max-width: 900px;
+            width: 100%;
+            margin: 0 auto;
+            display: flex;
+            flex-direction: column;
+            padding: 20px;
+            overflow: hidden;
+        }
+
+        .messages {
+            flex: 1;
+            overflow-y: auto;
+            padding: 20px;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+
+        .message {
+            margin-bottom: 16px;
+            display: flex;
+            gap: 12px;
+            animation: fadeIn 0.3s ease-in;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .message-icon {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            font-size: 20px;
+        }
+
+        .user-icon {
+            background: #3b82f6;
+            color: white;
+        }
+
+        .assistant-icon {
+            background: #f59e0b;
+            color: white;
+        }
+
+        .message-content {
+            flex: 1;
+            padding: 12px 16px;
+            border-radius: 12px;
+            line-height: 1.5;
+            white-space: pre-wrap;
+        }
+
+        .user-message .message-content {
+            background: #eff6ff;
+            border: 1px solid #dbeafe;
+        }
+
+        .assistant-message .message-content {
+            background: #fff7ed;
+            border: 1px solid #fed7aa;
+        }
+
+        .input-container {
+            display: flex;
+            gap: 12px;
+            background: white;
+            padding: 16px;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+
+        #messageInput {
+            flex: 1;
+            padding: 12px 16px;
+            border: 2px solid #e5e7eb;
+            border-radius: 8px;
+            font-size: 16px;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+
+        #messageInput:focus {
+            border-color: #f59e0b;
+        }
+
+        #sendButton {
+            padding: 12px 24px;
+            background: linear-gradient(90deg, #fbbf24 0%, #fb923c 100%);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s, opacity 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        #sendButton:hover:not(:disabled) {
+            transform: translateY(-2px);
+        }
+
+        #sendButton:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #f59e0b;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .error {
+            color: #dc2626;
+        }
+
+        .debug {
+            background: #fef3c7;
+            border: 1px solid #fbbf24;
+            padding: 8px;
+            margin-top: 8px;
+            font-size: 12px;
+            border-radius: 4px;
+            font-family: monospace;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div class="header-content">
+            <span style="font-size: 28px;">🤖</span>
+            <h1>BNB Chatbot</h1>
+        </div>
+    </div>
+
+    <div class="chat-container">
+        <div class="messages" id="messages">
+            <div class="message assistant-message">
+                <div class="message-icon assistant-icon">🤖</div>
+                <div class="message-content">
+                    Hello! I'm your BNB assistant. How can I help you today?
+                </div>
+            </div>
+        </div>
+
+        <div class="input-container">
+            <input 
+                type="text" 
+                id="messageInput" 
+                placeholder="Type your message here..."
+                autocomplete="off"
+            />
+            <button id="sendButton">
+                <span>Send</span>
+                <span>➤</span>
+            </button>
+        </div>
+    </div>
+
+    <script>
+        const messagesDiv = document.getElementById('messages');
+        const messageInput = document.getElementById('messageInput');
+        const sendButton = document.getElementById('sendButton');
+        let messages = [];
+        let isLoading = false;
+
+        function addMessage(role, content, debug = null) {
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message ${role}-message`;
+            
+            const icon = document.createElement('div');
+            icon.className = `message-icon ${role}-icon`;
+            icon.textContent = role === 'user' ? '👤' : '🤖';
+            
+            const contentDiv = document.createElement('div');
+            contentDiv.className = 'message-content';
+            contentDiv.textContent = content;
+            
+            messageDiv.appendChild(icon);
+            messageDiv.appendChild(contentDiv);
+            
+            if (debug) {
+                const debugDiv = document.createElement('div');
+                debugDiv.className = 'debug';
+                debugDiv.textContent = debug;
+                messageDiv.querySelector('.message-content').appendChild(debugDiv);
+            }
+            
+            messagesDiv.appendChild(messageDiv);
+            messagesDiv.scrollTop = messagesDiv.scrollHeight;
+        }
+
+        async function sendMessage() {
+            if (isLoading || !messageInput.value.trim()) return;
+            
+            const userMessage = messageInput.value.trim();
+            messageInput.value = '';
+            
+            addMessage('user', userMessage);
+            messages.push({ role: 'user', content: userMessage });
+            
+            isLoading = true;
+            sendButton.disabled = true;
+            sendButton.innerHTML = '<div class="loading"></div>';
+            
+            try {
+                console.log('Sending request to:', 'https://e24dd8407dfe.ngrok-free.app/api/gateway/call');
+                
+                // Format for Gemini API via BNB Gateway
+                // Note: base_endpoint already includes the full path, so we use empty path
+                const requestBody = {
+                    method: 'POST',
+                    path: '', // Empty because base_endpoint already has the full URL
+                    body: {
+                        contents: [
+                            {
+                                parts: messages.map(msg => ({
+                                    text: `${msg.role === 'user' ? 'User' : 'Assistant'}: ${msg.content}`
+                                }))
+                            }
+                        ]
+                    }
+                };
+                
+                console.log('Request body:', requestBody);
+                
+                const response = await fetch('https://e24dd8407dfe.ngrok-free.app/api/gateway/call', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-BNB-API-Key': 'bnb_429695e5649b8cd1848471d27ab04dcd3de1b8ffe64a23ab80c32f404557178f'
+                    },
+                    body: JSON.stringify(requestBody)
+                });
+
+                console.log('Response status:', response.status);
+                console.log('Response headers:', [...response.headers.entries()]);
+
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    console.error('Error response:', errorText);
+                    throw new Error(`API error: ${response.status} ${response.statusText}\n${errorText}`);
+                }
+
+                const data = await response.json();
+                console.log('Response data:', data);
+                
+                // Parse Gemini response format
+                const assistantMessage = data.candidates?.[0]?.content?.parts?.[0]?.text ||
+                                       data.response ||
+                                       data.message ||
+                                       'Sorry, I couldn\'t generate a response.';
+                
+                addMessage('assistant', assistantMessage);
+                messages.push({ role: 'assistant', content: assistantMessage });
+                
+            } catch (error) {
+                console.error('Full error:', error);
+                addMessage('assistant', 
+                    `❌ Error: ${error.message}`,
+                    `Debug Info:\n- Make sure the server is running on http://localhost:3000\n- Check the API key is correct\n- Gemini API format: /v1beta/models/MODEL:generateContent\n- Check browser console for more details`
+                );
+            } finally {
+                isLoading = false;
+                sendButton.disabled = false;
+                sendButton.innerHTML = '<span>Send</span><span>➤</span>';
+                messageInput.focus();
+            }
+        }
+
+        sendButton.addEventListener('click', sendMessage);
+        
+        messageInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                sendMessage();
+            }
+        });
+
+        messageInput.focus();
+        
+        // Test connection on load
+        console.log('BNB Chatbot loaded');
+        console.log('Testing server connection...');
+        fetch('http://localhost:3000/api/health')
+            .then(r => console.log('Server reachable:', r.status))
+            .catch(e => console.warn('Server connection test failed:', e.message));
+    </script>
+</body>
+</html>

@@ -10,6 +10,25 @@ const pool = new Pool({
 })
 
 /**
+ * CORS headers for cross-origin requests
+ */
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+  'Access-Control-Allow-Headers': 'Content-Type, X-BNB-API-Key, x-bnb-api-key',
+}
+
+/**
+ * Helper function to create JSON response with CORS headers
+ */
+function jsonResponse(data: any, status: number = 200) {
+  return NextResponse.json(data, {
+    status,
+    headers: corsHeaders
+  })
+}
+
+/**
  * Log API usage to blockchain (async, non-blocking)
  * Uses escrow wallet funded by buyer's gas fee deposit
  * Now uses a queue to prevent nonce collisions
@@ -153,6 +172,21 @@ async function logUsageToBlockchain(access: any, callLogId: number, purchaseId: 
 }
 
 /**
+ * Handle CORS preflight requests
+ */
+export async function OPTIONS(req: NextRequest) {
+  return new NextResponse(null, {
+    status: 200,
+    headers: {
+      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+      'Access-Control-Allow-Headers': 'Content-Type, X-BNB-API-Key, x-bnb-api-key',
+      'Access-Control-Max-Age': '86400',
+    },
+  })
+}
+
+/**
  * API Gateway - Proxy endpoint for buyers to use purchased APIs
  * 
  * Usage:
@@ -175,9 +209,9 @@ export async function POST(req: NextRequest) {
     const apiKey = req.headers.get('X-BNB-API-Key') || req.headers.get('x-bnb-api-key')
     
     if (!apiKey) {
-      return NextResponse.json(
+      return jsonResponse(
         { error: 'Missing X-BNB-API-Key header' },
-        { status: 401 }
+        401
       )
     }
 
