@@ -117,7 +117,7 @@ export default function BuyerOverview() {
           />
           <EnhancedKpi
             title="Cost Saved"
-            value={`$${data.kpis.costSavedUsd.toFixed(2)}`}
+            value={`${data.kpis.costSavedUsd.toFixed(6)} ETH`}
             helper="vs on-demand"
             icon={DollarSign}
             trend={15.2}
@@ -321,7 +321,7 @@ export default function BuyerOverview() {
                     <td>{formatNumber(row.calls)}</td>
                     <td>{Math.round(row.success * 100)}%</td>
                     <td>{row.avgLatencyMs} ms</td>
-                    <td>${row.costUsd.toFixed(2)}</td>
+                    <td>{row.costUsd.toFixed(6)} ETH</td>
                   </tr>
                 ))}
               </tbody>

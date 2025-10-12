@@ -93,6 +93,7 @@ export default function SellAPIPage() {
     const [submitSuccess, setSubmitSuccess] = useState(false)
     const [successData, setSuccessData] = useState<{
         dbId: number;
+        listingId?: string;
         txHash?: string;
         explorerUrl?: string;
     } | null>(null)
@@ -226,9 +227,9 @@ export default function SellAPIPage() {
             // Step 4: Show success dialog with details
             setSuccessData({
                 dbId: result.data.id,
-                // If blockchain integration is added later:
-                // txHash: result.txHash,
-                // explorerUrl: `https://sepolia.etherscan.io/tx/${result.txHash}`
+                listingId: result.data.blockchain?.listingId,
+                txHash: result.data.blockchain?.txHash,
+                explorerUrl: result.data.blockchain?.explorerUrl
             })
             setSubmitSuccess(true)
 
@@ -939,10 +940,26 @@ export default function SellAPIPage() {
                                     {successData.txHash && (
                                         <>
                                             <Separator />
-                                            <div className="space-y-2">
-                                                <Label className="text-sm font-medium">Transaction Hash</Label>
-                                                <div className="p-3 bg-secondary rounded-lg">
-                                                    <code className="text-xs break-all">{successData.txHash}</code>
+                                            <div className="space-y-3">
+                                                <div className="flex items-center gap-2 text-sm font-medium text-green-600 dark:text-green-400">
+                                                    <CheckCircle2 className="w-4 h-4" />
+                                                    <span>Registered on Blockchain</span>
+                                                </div>
+                                                
+                                                {successData.listingId && (
+                                                    <div className="space-y-2">
+                                                        <Label className="text-sm font-medium">Blockchain Listing ID</Label>
+                                                        <div className="p-3 bg-secondary rounded-lg">
+                                                            <code className="text-sm font-mono">#{successData.listingId}</code>
+                                                        </div>
+                                                    </div>
+                                                )}
+                                                
+                                                <div className="space-y-2">
+                                                    <Label className="text-sm font-medium">Transaction Hash</Label>
+                                                    <div className="p-3 bg-secondary rounded-lg">
+                                                        <code className="text-xs break-all font-mono">{successData.txHash}</code>
+                                                    </div>
                                                 </div>
                                             </div>
 
@@ -964,9 +981,12 @@ export default function SellAPIPage() {
                                         <AlertTitle className="text-blue-900 dark:text-blue-100">Next Steps</AlertTitle>
                                         <AlertDescription className="text-blue-800 dark:text-blue-200 text-sm">
                                             <ul className="list-disc list-inside space-y-1 mt-2">
-                                                <li>Your API is being reviewed by our team</li>
-                                                <li>You'll receive a notification once approved</li>
-                                                <li>Check your seller dashboard for status updates</li>
+                                                <li>Your API is now live and discoverable</li>
+                                                <li>Buyers can start purchasing quota immediately</li>
+                                                <li>Check your seller dashboard for analytics and earnings</li>
+                                                {successData.txHash && (
+                                                    <li>Blockchain registration provides immutable proof of ownership</li>
+                                                )}
                                             </ul>
                                         </AlertDescription>
                                     </Alert>
