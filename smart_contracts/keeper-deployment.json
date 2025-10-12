@@ -1,0 +1,8 @@
+{
+  "network": "sepolia",
+  "contractAddress": "0xfe1aba11232a35c0ef6daee243a89b12f0fc67b9",
+  "verifiedAt": "2025-10-12T01:18:05.133Z",
+  "contractSize": 10240,
+  "etherscanUrl": "https://sepolia.etherscan.io/address/0xfe1aba11232a35c0ef6daee243a89b12f0fc67b9",
+  "status": "deployed"
+}
