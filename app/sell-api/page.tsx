@@ -99,6 +99,13 @@ export default function SellAPIPage() {
         explorerUrl?: string;
     } | null>(null)
     const [categoryInput, setCategoryInput] = useState("")
+    const [isVerifying, setIsVerifying] = useState(false)
+    const [verificationResult, setVerificationResult] = useState<{
+        verified: boolean;
+        message?: string;
+        error?: string;
+        details?: any;
+    } | null>(null)
 
     const validateForm = (): boolean => {
         const newErrors: FormErrors = {}
@@ -157,6 +164,62 @@ export default function SellAPIPage() {
         return Object.keys(newErrors).length === 0
     }
 
+    const handleVerifyAPI = async () => {
+        console.log("Verifying API credentials...")
+        
+        // Validate required fields for verification
+        if (!formData.baseEndpoint || !formData.authType || !formData.authParamName || !formData.apiKey) {
+            setErrors({ 
+                apiKey: "Please fill in all authentication fields before verifying" 
+            })
+            return
+        }
+
+        setIsVerifying(true)
+        setVerificationResult(null)
+        setErrors({})
+
+        try {
+            const response = await fetch('/api/api-registry/verify-api', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    baseEndpoint: formData.baseEndpoint,
+                    authType: formData.authType,
+                    authParamName: formData.authParamName,
+                    apiKey: formData.apiKey
+                })
+            })
+
+            const result = await response.json()
+
+            if (result.verified) {
+                setVerificationResult({
+                    verified: true,
+                    message: result.message,
+                    details: result.details
+                })
+                console.log("✅ API verification successful:", result)
+            } else {
+                setVerificationResult({
+                    verified: false,
+                    error: result.error,
+                    details: result.details
+                })
+                console.log("❌ API verification failed:", result)
+            }
+
+        } catch (error: any) {
+            console.error("Verification error:", error)
+            setVerificationResult({
+                verified: false,
+                error: "Failed to verify API. Please check your connection and try again."
+            })
+        } finally {
+            setIsVerifying(false)
+        }
+    }
+
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault()
 
@@ -166,6 +229,30 @@ export default function SellAPIPage() {
             setErrors({ submit: "You must be logged in to register an API" })
             window.scrollTo({ top: 0, behavior: 'smooth' })
             return
+        }
+
+        // Warn if API is not verified (but allow submission)
+        if (!verificationResult) {
+            const confirmSubmit = window.confirm(
+                "⚠️ You haven't verified your API credentials yet.\n\n" +
+                "It's highly recommended to verify your API works before listing it.\n\n" +
+                "Do you want to proceed anyway?"
+            )
+            if (!confirmSubmit) {
+                return
+            }
+        } else if (!verificationResult.verified) {
+            const confirmSubmit = window.confirm(
+                "⚠️ API verification failed.\n\n" +
+                "Your API credentials couldn't be verified. This might be due to:\n" +
+                "- Incorrect endpoint URL\n" +
+                "- Invalid API key\n" +
+                "- API requires specific authentication format\n\n" +
+                "Do you want to proceed with registration anyway?"
+            )
+            if (!confirmSubmit) {
+                return
+            }
         }
 
         const isValid = validateForm()
@@ -695,7 +782,13 @@ export default function SellAPIPage() {
                                                 : "Enter your OAuth credentials (client_id and client_secret)\nThis will be encrypted before submission"
                                     }
                                     value={formData.apiKey}
-                                    onChange={(e) => handleInputChange("apiKey", e.target.value)}
+                                    onChange={(e) => {
+                                        handleInputChange("apiKey", e.target.value)
+                                        // Clear verification result when key changes
+                                        if (verificationResult) {
+                                            setVerificationResult(null)
+                                        }
+                                    }}
                                     className={cn("min-h-[80px] font-mono text-sm", errors.apiKey ? "border-red-500" : "")}
                                 />
                                 {errors.apiKey && (
@@ -704,6 +797,85 @@ export default function SellAPIPage() {
                                         {errors.apiKey}
                                     </p>
                                 )}
+                                
+                                {/* Verify API Button */}
+                                <Button
+                                    type="button"
+                                    variant="outline"
+                                    onClick={handleVerifyAPI}
+                                    disabled={isVerifying || !formData.baseEndpoint || !formData.authType || !formData.authParamName || !formData.apiKey}
+                                    className="w-full mt-2"
+                                >
+                                    {isVerifying ? (
+                                        <>
+                                            <div className="animate-spin h-4 w-4 border-2 border-primary border-t-transparent rounded-full mr-2" />
+                                            Verifying API...
+                                        </>
+                                    ) : verificationResult?.verified ? (
+                                        <>
+                                            <CheckCircle2 className="w-4 h-4 mr-2 text-green-600" />
+                                            API Verified ✓
+                                        </>
+                                    ) : (
+                                        <>
+                                            <Shield className="w-4 h-4 mr-2" />
+                                            Verify API Credentials
+                                        </>
+                                    )}
+                                </Button>
+
+                                {/* Verification Result */}
+                                {verificationResult && (
+                                    <Alert className={verificationResult.verified 
+                                        ? "bg-green-50 dark:bg-green-950/20 border-green-200 dark:border-green-800" 
+                                        : "bg-yellow-50 dark:bg-yellow-950/20 border-yellow-200 dark:border-yellow-800"
+                                    }>
+                                        {verificationResult.verified ? (
+                                            <>
+                                                <CheckCircle2 className="h-4 w-4 text-green-600 dark:text-green-400" />
+                                                <AlertTitle className="text-green-900 dark:text-green-100">
+                                                    API Verified Successfully!
+                                                </AlertTitle>
+                                                <AlertDescription className="text-green-800 dark:text-green-200 text-xs">
+                                                    {verificationResult.message}
+                                                    {verificationResult.details && (
+                                                        <div className="mt-2 space-y-1">
+                                                            <p>• Status Code: {verificationResult.details.statusCode}</p>
+                                                            <p>• Response Time: {verificationResult.details.responseTime}ms</p>
+                                                            <p>• Auth Type: {verificationResult.details.authType}</p>
+                                                        </div>
+                                                    )}
+                                                </AlertDescription>
+                                            </>
+                                        ) : (
+                                            <>
+                                                <AlertCircle className="h-4 w-4 text-yellow-600 dark:text-yellow-400" />
+                                                <AlertTitle className="text-yellow-900 dark:text-yellow-100">
+                                                    Verification Failed
+                                                </AlertTitle>
+                                                <AlertDescription className="text-yellow-800 dark:text-yellow-200 text-xs">
+                                                    <p className="font-semibold">{verificationResult.error}</p>
+                                                    {verificationResult.details?.hint && (
+                                                        <p className="mt-2 italic">💡 {verificationResult.details.hint}</p>
+                                                    )}
+                                                    {verificationResult.details?.statusCode && (
+                                                        <div className="mt-2 space-y-1">
+                                                            <p>• Status Code: {verificationResult.details.statusCode}</p>
+                                                            {verificationResult.details.responseTime && (
+                                                                <p>• Response Time: {verificationResult.details.responseTime}ms</p>
+                                                            )}
+                                                        </div>
+                                                    )}
+                                                    <p className="mt-2 text-xs">
+                                                        <strong>Note:</strong> You can still proceed with registration if you're confident your credentials are correct. 
+                                                        The verification makes a test call to validate the API is reachable and credentials work.
+                                                    </p>
+                                                </AlertDescription>
+                                            </>
+                                        )}
+                                    </Alert>
+                                )}
+                                
                                 <div className="space-y-1 text-xs">
                                     <div className="flex items-center gap-2 text-green-600 dark:text-green-400">
                                         <Lock className="w-3 h-3" />
@@ -713,7 +885,7 @@ export default function SellAPIPage() {
                                         <p>• This is YOUR master key from the API provider (OpenAI, Stripe, etc.)</p>
                                         <p>• Buyers will get unique sub-keys, never your master key</p>
                                         <p>• Keeper nodes use this to proxy authenticated requests</p>
-                                        <p>• Test your key before submitting to ensure it works</p>
+                                        <p>• You must verify your key before submitting</p>
                                     </div>
                                 </div>
                             </div>
@@ -882,7 +1054,7 @@ export default function SellAPIPage() {
                                 </Button>
                                 <Button
                                     type="submit"
-                                    disabled={isSubmitting}
+                                    disabled={isSubmitting || !verificationResult?.verified}
                                     className="min-w-[140px]"
                                 >
                                     {isSubmitting ? (
