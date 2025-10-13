@@ -650,6 +650,6 @@ MIT License - see [LICENSE](LICENSE) file for details.
 
 ---
 
-**Built by [@ScarRanger](https://github.com/ScarRanger) | October 2025**
+**Built by [Rhine Pereira](https://github.com/ScarRanger), [@ashleyalmeida07](https://github.com/ashleyalmeida07), [@Jason3105](https://github.com/Jason3105) | October 2025**
 
 For support: [GitHub Issues](https://github.com/ScarRanger/Flux-API/issues) | [Discussions](https://github.com/ScarRanger/Flux-API/discussions)
