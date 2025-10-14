@@ -6,7 +6,7 @@
     "build": "next build",
     "dev": "next dev",
     "lint": "next lint",
-    "start": "next start"
+    "start": "concurrently \"next start\" \"cd keeper-node && npm start\""
   },
   "dependencies": {
     "@hookform/resolvers": "^3.10.0",
@@ -75,6 +75,9 @@
     "@types/pg": "^8.11.10",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "concurrently": "^8.2.2",
+    "eslint": "^9.37.0",
+    "eslint-config-next": "15.5.4",
     "postcss": "^8.5",
     "tailwindcss": "^4.1.9",
     "tsx": "^4.20.6",
