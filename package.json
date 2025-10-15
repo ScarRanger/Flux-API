@@ -3,10 +3,11 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "build": "next build",
+    "build": "next build && cd keeper-node && npm install",
     "dev": "next dev",
     "lint": "next lint",
-    "start": "concurrently \"next start\" \"cd keeper-node && npm start\""
+    "start": "concurrently \"next start\" \"node keeper-node/server.js\"",
+    "postinstall": "cd keeper-node && npm install"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.10.0",
