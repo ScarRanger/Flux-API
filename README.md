@@ -123,6 +123,9 @@ FIREBASE_ADMIN_SERVICE_ACCOUNT='{"type":"service_account",...}'
 # AI Integration
 GEMINI_API_KEY="<gemini_api_key>"
 
+# Keeper Node
+KEEPER_NODE_URL="http://localhost:3001" # Local dev, or https://your-keeper-node.onrender.com for production
+
 # Application
 NEXT_PUBLIC_APP_URL="http://localhost:3000"
 ```
